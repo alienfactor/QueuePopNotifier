@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.44."""
+"""Queue Pop Notifier – desktop client 0.3.45."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,8 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.44"
+APP_VERSION = "0.3.45"
+APP_USER_MODEL_ID = "UniQueue.QueuePopNotifier"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -40,6 +41,25 @@ DEFAULTS = {
     "pushover_priority": 1,
     "start_with_windows": False,
 }
+
+
+def configure_windows_app_identity():
+    """Give native Windows notifications a stable name and application icon."""
+    if os.name != "nt":
+        return
+    try:
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
+        icon_source = Path(sys.executable).resolve() if getattr(sys, "frozen", False) else ICON_PATH.resolve()
+        with winreg.CreateKey(
+            winreg.HKEY_CURRENT_USER,
+            rf"Software\Classes\AppUserModelId\{APP_USER_MODEL_ID}",
+        ) as key:
+            winreg.SetValueEx(key, "DisplayName", 0, winreg.REG_SZ, "Queue Pop Notifier")
+            winreg.SetValueEx(key, "IconUri", 0, winreg.REG_SZ, str(icon_source))
+    except OSError:
+        # Identity metadata improves notification presentation but must never
+        # prevent queue detection from starting.
+        pass
 
 TEXTS = {
     "de": {
@@ -710,7 +730,8 @@ class CompanionApp(tk.Tk):
         self.save_button.pack(side="right")
         self.version_label = tk.Label(root, text=self._t("version", version=APP_VERSION), bg=bg, fg=muted,
                                       font=("Segoe UI", 8))
-        self.version_label.pack(anchor="center", pady=(8, 0))
+        self.version_label.pack(fill="x", anchor="e", pady=(8, 0))
+        self.version_label.configure(anchor="e")
         self.user_var.trace_add("write", self._credentials_changed)
         self.token_var.trace_add("write", self._credentials_changed)
 
@@ -1207,6 +1228,7 @@ try {
 
 
 if __name__ == "__main__":
+    configure_windows_app_identity()
     _instance_mutex = acquire_single_instance()
     if _instance_mutex is False:
         raise SystemExit(0)
