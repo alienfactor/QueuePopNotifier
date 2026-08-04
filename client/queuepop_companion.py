@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.43."""
+"""Queue Pop Notifier – desktop client 0.3.44."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.43"
+APP_VERSION = "0.3.44"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -1103,7 +1103,6 @@ try {
     $newProcess = Start-Process -FilePath $Target -PassThru
     Start-Sleep -Seconds 3
     if ($newProcess.HasExited) { throw 'Der aktualisierte Client wurde unerwartet beendet.' }
-    Remove-Item -LiteralPath $backup -Force -ErrorAction Stop
   } catch {
     if ($newProcess -and -not $newProcess.HasExited) {
       Stop-Process -Id $newProcess.Id -Force -ErrorAction SilentlyContinue
@@ -1115,6 +1114,9 @@ try {
     Start-Process -FilePath $Target
     throw
   }
+  # The update is already successful at this point. A locked backup is harmless
+  # and will be removed by the client on a later start.
+  Remove-Item -LiteralPath $backup -Force -ErrorAction SilentlyContinue
 } catch {
   Add-Type -AssemblyName PresentationFramework
   [System.Windows.MessageBox]::Show("Update fehlgeschlagen: $($_.Exception.Message)", 'Queue Pop Notifier') | Out-Null

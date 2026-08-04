@@ -51,7 +51,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QueuePopNotifier_Client_v0.3.43_Windows
+          name: QueuePopNotifier_Client_v0.3.44_Windows
           path: |
             dist/QueuePopNotifier.exe
             dist/QueuePopNotifier.exe.sha256
@@ -70,7 +70,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
           if (-not (git diff --cached --quiet)) {
-            git commit -m "Build Windows client 0.3.43"
+            git commit -m "Build Windows client 0.3.44"
             git push
           }
 
@@ -79,9 +79,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.3.43"
-          $title = "Queue Pop Notifier 0.3.43"
-          $notes = "Adds a direct Issues link to the tray menu and simplifies all tray status messages."
+          $tag = "v0.3.44"
+          $title = "Queue Pop Notifier 0.3.44"
+          $notes = "Prevents a harmless cleanup failure after a successful update from triggering a false error dialog or rollback. Stale backup files are retried on the next client start."
           gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag dist/QueuePopNotifier.exe dist/QueuePopNotifier.exe.sha256 --clobber
