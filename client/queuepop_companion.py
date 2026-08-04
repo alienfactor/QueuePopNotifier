@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.41."""
+"""Queue Pop Notifier – desktop client 0.3.42."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.41"
+APP_VERSION = "0.3.42"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -1140,7 +1140,6 @@ try {
         try:
             target_exe = Path(sys.executable).resolve()
             creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-            self._show_update_notice()
             subprocess.Popen(
                 [
                     "powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
@@ -1158,16 +1157,6 @@ try {
             self._terminate_for_update()
         except Exception as exc:
             self._update_install_failed(str(exc))
-
-    def _show_update_notice(self):
-        """Show a foreground notice that cannot disappear with a hidden tray window."""
-        title = self._t("update_notice_title")
-        message = self._t("update_notice_message", version=self.available_version)
-        if os.name == "nt":
-            # MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL | MB_SETFOREGROUND
-            ctypes.windll.user32.MessageBoxW(None, message, title, 0x00000040 | 0x00001000 | 0x00010000)
-        else:
-            messagebox.showinfo(title, message)
 
     def _terminate_for_update(self):
         """Guarantee that no Python or tray thread keeps the old executable alive."""

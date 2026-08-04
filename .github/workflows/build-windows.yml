@@ -51,7 +51,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QueuePopNotifier_Client_v0.3.41_Windows
+          name: QueuePopNotifier_Client_v0.3.42_Windows
           path: |
             dist/QueuePopNotifier.exe
             dist/QueuePopNotifier.exe.sha256
@@ -70,7 +70,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
           if (-not (git diff --cached --quiet)) {
-            git commit -m "Build Windows client 0.3.41"
+            git commit -m "Build Windows client 0.3.42"
             git push
           }
 
@@ -79,9 +79,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.3.41"
-          $title = "Queue Pop Notifier 0.3.41"
-          $notes = "Fixes automatic restart after an update by resetting the inherited PyInstaller environment before launching the new executable."
+          $tag = "v0.3.42"
+          $title = "Queue Pop Notifier 0.3.42"
+          $notes = "Removes the confirmation dialog during automatic update installation. Update progress remains visible in the tray status."
           gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag dist/QueuePopNotifier.exe dist/QueuePopNotifier.exe.sha256 --clobber
