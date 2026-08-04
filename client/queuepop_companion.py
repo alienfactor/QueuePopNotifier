@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.39."""
+"""Queue Pop Notifier – desktop client 0.3.40."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.39"
+APP_VERSION = "0.3.40"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -64,7 +64,7 @@ TEXTS = {
         "start_with_windows": "Mit Windows starten",
         "test_pushover": "Testnachricht senden", "save": "Speichern", "saved": "Gespeichert ✓",
         "tray_settings": "Einstellungen …",
-        "tray_status": "{indicator}  {status}", "tray_version": "Version {version} · Updates automatisch",
+        "tray_status": "{indicator}  {status}", "version": "Version {version}",
         "update_downloading": "Update {version} wird heruntergeladen …",
         "update_installing": "Update geprüft · Client wird neu gestartet",
         "update_notice_title": "Update wird installiert",
@@ -91,10 +91,10 @@ TEXTS = {
         "confirm_in_wow": "Jetzt in WoW bestätigen.",
         "queue_detected": "Queue erkannt · Benachrichtigung wird gesendet",
         "queue_no_pushover": "Queue erkannt · Pushover ist noch nicht eingerichtet",
-        "check_disturbed": "Überwachung gestört · WoW kann gerade nicht geprüft werden", "waiting_wow": "Warte auf WoW",
+        "check_disturbed": "Queue-Erkennung gestört", "waiting_wow": "WoW nicht erkannt",
         "wow_not_open": "WoW ist nicht geöffnet oder wurde noch nicht erkannt.",
-        "monitoring_active": "WoW erkannt · Queue-Überwachung aktiv", "wow_pop_ready": "WoW erkannt · bereit für Queue-Pops",
-        "client_searching": "Client aktiv · wartet auf WoW", "client_started": "Client wird gestartet",
+        "monitoring_active": "Queue-Erkennung aktiv", "wow_pop_ready": "Queue-Erkennung aktiv",
+        "client_searching": "WoW nicht erkannt", "client_started": "Startet …",
         "tray_open": "Öffnen", "tray_quit": "Beenden",
         "client_to_screen_failed": "Fensterposition konnte nicht ermittelt werden",
         "capture_error": "Bildschirmaufnahme fehlgeschlagen", "invalid_response": "Ungültige Antwort von Pushover",
@@ -122,7 +122,7 @@ TEXTS = {
         "start_with_windows": "Start with Windows",
         "test_pushover": "Send test notification", "save": "Save", "saved": "Saved ✓",
         "tray_settings": "Settings …",
-        "tray_status": "{indicator}  {status}", "tray_version": "Version {version} · updates automatically",
+        "tray_status": "{indicator}  {status}", "version": "Version {version}",
         "update_downloading": "Downloading update {version} …",
         "update_installing": "Update verified · restarting client",
         "update_notice_title": "Installing update",
@@ -149,10 +149,10 @@ TEXTS = {
         "confirm_in_wow": "Confirm in WoW now.",
         "queue_detected": "Queue detected · sending notification",
         "queue_no_pushover": "Queue detected · Pushover is not configured yet",
-        "check_disturbed": "Monitoring interrupted · WoW cannot be checked right now", "waiting_wow": "Waiting for WoW",
+        "check_disturbed": "Queue detection disrupted", "waiting_wow": "WoW not detected",
         "wow_not_open": "WoW is not open or has not been detected yet.",
-        "monitoring_active": "WoW detected · queue monitoring active", "wow_pop_ready": "WoW detected · ready for queue pops",
-        "client_searching": "Client active · waiting for WoW", "client_started": "Client is starting",
+        "monitoring_active": "Queue detection active", "wow_pop_ready": "Queue detection active",
+        "client_searching": "WoW not detected", "client_started": "Starting …",
         "tray_open": "Open", "tray_quit": "Quit",
         "client_to_screen_failed": "Could not determine the window position",
         "capture_error": "Screen capture failed", "invalid_response": "Invalid response from Pushover",
@@ -708,6 +708,9 @@ class CompanionApp(tk.Tk):
         self.test_button.pack(side="left", padx=(0, 8))
         self.save_button = ttk.Button(actions, text=self._t("save"), style="Primary.TButton", command=self._save)
         self.save_button.pack(side="right")
+        self.version_label = tk.Label(root, text=self._t("version", version=APP_VERSION), bg=bg, fg=muted,
+                                      font=("Segoe UI", 8))
+        self.version_label.pack(anchor="center", pady=(8, 0))
         self.user_var.trace_add("write", self._credentials_changed)
         self.token_var.trace_add("write", self._credentials_changed)
 
@@ -957,7 +960,6 @@ class CompanionApp(tk.Tk):
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem(self._t("tray_settings"), lambda *_: self.after(0, self._open_settings), default=True),
                 pystray.Menu.SEPARATOR,
-                pystray.MenuItem(self._t("tray_version", version=APP_VERSION), None, enabled=False),
                 pystray.MenuItem(self._t("tray_quit"), lambda *_: self.after(0, self._quit_app)),
             )
             self.tray_icon = pystray.Icon("QueuePopNotifier", image, "Queue Pop Notifier", menu)
