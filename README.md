@@ -32,7 +32,7 @@ You can step away from your computer without constantly watching the screen.
 
 ## Requirements
 
-* World of Warcraft with the Queue Pop Notifier add-on installed
+* World of Warcraft with the [Queue Pop Notifier add-on](https://www.curseforge.com/wow/addons/queue-pop-notifier) installed
 * Windows 10 or Windows 11
 * The Queue Pop Notifier desktop client
 * A [Pushover](https://pushover.net/) account and smartphone app
