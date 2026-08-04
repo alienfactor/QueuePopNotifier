@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.42."""
+"""Queue Pop Notifier – desktop client 0.3.43."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.42"
+APP_VERSION = "0.3.43"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -63,10 +63,10 @@ TEXTS = {
         "general": "Allgemein",
         "start_with_windows": "Mit Windows starten",
         "test_pushover": "Testnachricht senden", "save": "Speichern", "saved": "Gespeichert ✓",
-        "tray_settings": "Einstellungen …",
-        "tray_status": "{indicator}  {status}", "version": "Version {version}",
-        "update_downloading": "Update {version} wird heruntergeladen …",
-        "update_installing": "Update geprüft · Client wird neu gestartet",
+        "tray_settings": "Einstellungen …", "tray_report_issue": "Problem melden",
+        "tray_status": "{status}", "version": "Version {version}",
+        "update_downloading": "Update wird heruntergeladen",
+        "update_installing": "Update wird installiert",
         "update_notice_title": "Update wird installiert",
         "update_notice_message": "Version {version} wurde heruntergeladen und wird jetzt installiert. Der Client startet anschließend neu.",
         "update_install_failed_title": "Update fehlgeschlagen",
@@ -94,7 +94,7 @@ TEXTS = {
         "check_disturbed": "Queue-Erkennung gestört", "waiting_wow": "WoW nicht erkannt",
         "wow_not_open": "WoW ist nicht geöffnet oder wurde noch nicht erkannt.",
         "monitoring_active": "Queue-Erkennung aktiv", "wow_pop_ready": "Queue-Erkennung aktiv",
-        "client_searching": "WoW nicht erkannt", "client_started": "Startet …",
+        "client_searching": "WoW nicht erkannt", "client_started": "Client wird gestartet",
         "tray_open": "Öffnen", "tray_quit": "Beenden",
         "client_to_screen_failed": "Fensterposition konnte nicht ermittelt werden",
         "capture_error": "Bildschirmaufnahme fehlgeschlagen", "invalid_response": "Ungültige Antwort von Pushover",
@@ -121,10 +121,10 @@ TEXTS = {
         "general": "General",
         "start_with_windows": "Start with Windows",
         "test_pushover": "Send test notification", "save": "Save", "saved": "Saved ✓",
-        "tray_settings": "Settings …",
-        "tray_status": "{indicator}  {status}", "version": "Version {version}",
-        "update_downloading": "Downloading update {version} …",
-        "update_installing": "Update verified · restarting client",
+        "tray_settings": "Settings …", "tray_report_issue": "Report an issue",
+        "tray_status": "{status}", "version": "Version {version}",
+        "update_downloading": "Downloading update",
+        "update_installing": "Installing update",
         "update_notice_title": "Installing update",
         "update_notice_message": "Version {version} has been downloaded and will now be installed. The client will then restart.",
         "update_install_failed_title": "Update failed",
@@ -152,7 +152,7 @@ TEXTS = {
         "check_disturbed": "Queue detection disrupted", "waiting_wow": "WoW not detected",
         "wow_not_open": "WoW is not open or has not been detected yet.",
         "monitoring_active": "Queue detection active", "wow_pop_ready": "Queue detection active",
-        "client_searching": "WoW not detected", "client_started": "Starting …",
+        "client_searching": "WoW not detected", "client_started": "Client is starting",
         "tray_open": "Open", "tray_quit": "Quit",
         "client_to_screen_failed": "Could not determine the window position",
         "capture_error": "Screen capture failed", "invalid_response": "Invalid response from Pushover",
@@ -959,6 +959,9 @@ class CompanionApp(tk.Tk):
                 pystray.MenuItem(lambda _item: self._tray_status_text(), lambda *_: None),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem(self._t("tray_settings"), lambda *_: self.after(0, self._open_settings), default=True),
+                pystray.MenuItem(self._t("tray_report_issue"), lambda *_: webbrowser.open(
+                    f"https://github.com/{GITHUB_REPOSITORY}/issues"
+                )),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem(self._t("tray_quit"), lambda *_: self.after(0, self._quit_app)),
             )
@@ -969,31 +972,21 @@ class CompanionApp(tk.Tk):
 
     def _tray_status_text(self):
         if self.update_in_progress:
-            return self._t(
-                "tray_status",
-                indicator="↻",
-                status=getattr(
-                    self, "current_status_text",
-                    self._t("update_downloading", version=self.available_version),
-                ),
-            )
+            return self._t("tray_status", status=getattr(
+                self, "current_status_text", self._t("update_downloading")
+            ))
         kind = getattr(self, "current_status_kind", None)
         if kind == "error":
-            indicator = "!"
             status = self._t("check_disturbed")
         elif kind == "waiting":
-            indicator = "…"
             status = self._t("client_searching")
         elif kind is None:
-            indicator = "…"
             status = self._t("client_started")
         elif not self.wow_available:
-            indicator = "…"
             status = self._t("client_searching")
         else:
-            indicator = "✓"
             status = self._t("monitoring_active")
-        return self._t("tray_status", indicator=indicator, status=status)
+        return self._t("tray_status", status=status)
 
     @staticmethod
     def _version_tuple(value):
@@ -1044,10 +1037,10 @@ class CompanionApp(tk.Tk):
         if not self.update_asset_url or not self.update_checksum_url:
             return
         self.update_in_progress = True
-        self._set_status("status", self._t("update_downloading", version=self.available_version))
+        self._set_status("status", self._t("update_downloading"))
         self._notify_tray(
             self._t("update_notice_title"),
-            self._t("update_downloading", version=self.available_version),
+            self._t("update_downloading"),
         )
         threading.Thread(target=self._download_update_worker, daemon=True).start()
 
