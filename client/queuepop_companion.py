@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.30."""
+"""Queue Pop Notifier – desktop client 0.3.31."""
 from __future__ import annotations
 
 import ctypes
@@ -17,7 +17,7 @@ import urllib.request
 import urllib.error
 import webbrowser
 
-APP_VERSION = "0.3.30"
+APP_VERSION = "0.3.31"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -50,7 +50,7 @@ TEXTS = {
         "tray_check_updates": "Nach Updates suchen", "tray_update_available": "Update verfügbar: {version} …",
         "tray_status": "● {status}", "tray_version": "Queue Pop Notifier {version}",
         "update_available_title": "Update verfügbar", "update_available_message": "Queue Pop Notifier {version} ist verfügbar.",
-        "update_current_title": "Kein Update verfügbar", "update_current_message": "Du verwendest bereits Version {version}.",
+        "update_current_title": "Kein Update verfügbar", "update_current_message": "Du verwendest bereits die neueste Version ({version}).",
         "update_failed_title": "Updateprüfung fehlgeschlagen", "update_failed_message": "GitHub konnte nicht geprüft werden: {error}",
         "update_not_configured": "Das GitHub-Repository ist noch nicht hinterlegt.",
         "missing_title": "Fehlende Daten", "missing_message": "Bitte User Key und App/API Token eintragen.",
@@ -96,7 +96,7 @@ TEXTS = {
         "tray_check_updates": "Check for updates", "tray_update_available": "Update available: {version} …",
         "tray_status": "● {status}", "tray_version": "Queue Pop Notifier {version}",
         "update_available_title": "Update available", "update_available_message": "Queue Pop Notifier {version} is available.",
-        "update_current_title": "No update available", "update_current_message": "You already have version {version}.",
+        "update_current_title": "No update available", "update_current_message": "You already have the latest version ({version}).",
         "update_failed_title": "Update check failed", "update_failed_message": "GitHub could not be checked: {error}",
         "update_not_configured": "The GitHub repository has not been configured yet.",
         "missing_title": "Missing information", "missing_message": "Please enter the User Key and App/API Token.",
