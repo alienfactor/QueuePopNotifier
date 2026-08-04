@@ -1,12 +1,12 @@
 name: Build Windows client
 
 on:
-  workflow_dispatch:
   push:
     branches: [main]
     paths:
       - "client/**"
       - ".github/workflows/build-windows.yml"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,30 +15,19 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: client/requirements.txt
 
       - name: Install dependencies
-        shell: pwsh
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -r client/requirements.txt
-          python -m pip install "pyinstaller>=6.10,<7"
+          pip install -r client/requirements.txt
+          pip install pyinstaller
 
-      - name: Restore application icon
-        shell: pwsh
-        run: |
-          $encoded = Get-Content client/queuepop_notifier.ico.b64 -Raw
-          [IO.File]::WriteAllBytes("client/queuepop_notifier.ico", [Convert]::FromBase64String($encoded.Trim()))
-
-      - name: Build executable and checksum
+      - name: Build Windows executable
         shell: pwsh
         run: |
           pyinstaller --noconfirm --clean --onefile --windowed `
@@ -46,32 +35,36 @@ jobs:
             --icon client/queuepop_notifier.ico `
             --add-data "client/queuepop_notifier.ico;." `
             client/queuepop_companion.py
-          $hash = (Get-FileHash dist/QueuePopNotifier.exe -Algorithm SHA256).Hash.ToLower()
-          "$hash  QueuePopNotifier.exe" | Set-Content dist/QueuePopNotifier.exe.sha256 -Encoding ascii
 
-      - name: Upload build artifacts
+      - name: Create SHA-256 checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash dist/QueuePopNotifier.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  QueuePopNotifier.exe" | Set-Content -NoNewline -Encoding ascii dist/QueuePopNotifier.exe.sha256
+
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QueuePopNotifier_Client_v0.3.34_Windows
+          name: QueuePopNotifier_Client_v0.3.37_Windows
           path: |
             dist/QueuePopNotifier.exe
             dist/QueuePopNotifier.exe.sha256
-          if-no-files-found: error
-          retention-days: 30
 
-      - name: Publish executable in repository
+      - name: Copy build into repository
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force builds/windows | Out-Null
           Copy-Item dist/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe -Force
           Copy-Item dist/QueuePopNotifier.exe.sha256 builds/windows/QueuePopNotifier.exe.sha256 -Force
+
+      - name: Commit compiled executable
+        shell: pwsh
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
-          if (git diff --cached --quiet) {
-            Write-Host "Build output is unchanged."
-          } else {
-            git commit -m "Build Windows client 0.3.34"
+          if (-not (git diff --cached --quiet)) {
+            git commit -m "Build Windows client 0.3.37"
             git push
           }
 
@@ -80,18 +73,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.3.34"
-          $title = "Queue Pop Notifier 0.3.34"
-          $notes = @"
-          ## Changes
-
-          - Added an optional per-user Windows startup setting.
-          - Updates continue to install automatically and quietly at application startup.
-          - Added SHA-256 verification for automatic update downloads.
-          "@
-          gh release view $tag *> $null
+          $tag = "v0.3.37"
+          $title = "Queue Pop Notifier 0.3.37"
+          $notes = "Windows desktop client 0.3.37"
+          gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag dist/QueuePopNotifier.exe dist/QueuePopNotifier.exe.sha256 --clobber
           } else {
-            gh release create $tag dist/QueuePopNotifier.exe dist/QueuePopNotifier.exe.sha256 --title $title --notes $notes --target "${{ github.sha }}"
+            gh release create $tag dist/QueuePopNotifier.exe dist/QueuePopNotifier.exe.sha256 --title $title --notes $notes
           }
