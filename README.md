@@ -1,19 +1,54 @@
 # Queue Pop Notifier
 
-**Never miss a World of Warcraft queue pop again.**
+> **Never miss a World of Warcraft queue pop again.**
 
-Queue Pop Notifier sends a notification to your smartphone as soon as your queue is ready, even when you are away from your computer.
+Queue Pop Notifier sends an instant notification to your smartphone when your World of Warcraft queue is ready — even if you are away from your computer.
 
-The World of Warcraft add-on detects the queue pop, while the lightweight Windows desktop client forwards the notification through Pushover. The client runs quietly in the system tray and only requires a one-time setup.
+The WoW add-on detects the queue pop and passes the event to the lightweight Windows desktop client. The client then sends the notification to your phone through [Pushover](https://pushover.net/).
 
-![How QueuePopNotifier works](queuepop-client-flow.png)
+![How Queue Pop Notifier works](queuepop-client-flow.png)
+
+## Features
+
+* Instant smartphone notifications for World of Warcraft queue pops
+* Automatic queue detection through the WoW add-on
+* Lightweight Windows desktop client
+* Runs quietly in the Windows system tray
+* Automatic update checks when the client starts
+* Optional automatic startup with Windows
+* Built-in test notification
+* Simple one-time Pushover setup
+* Local storage of credentials and settings
+* Reproducible Windows builds through GitHub Actions
+
+## How It Works
+
+1. Your World of Warcraft queue becomes ready.
+2. The add-on detects the queue pop.
+3. The desktop client receives the event.
+4. Pushover sends an alert to your smartphone.
+
+You can step away from your computer without constantly watching the screen.
+
+## Requirements
+
+* World of Warcraft with the Queue Pop Notifier add-on installed
+* Windows 10 or Windows 11
+* The Queue Pop Notifier desktop client
+* A [Pushover](https://pushover.net/) account and smartphone app
 
 ## Desktop Client
 
-The Windows executable is built reproducibly using GitHub Actions. All Pushover credentials and application settings are stored locally under:
+The desktop client runs in the Windows system tray and remains unobtrusive during normal use. After the initial Pushover setup, no further interaction is normally required.
+
+The Windows executable is built reproducibly using GitHub Actions.
+
+## Privacy and Local Storage
+
+All Pushover credentials and application settings are stored locally under:
 
 ```text
 %APPDATA%\QueuePopNotifier
 ```
 
-Personal data is never included in the repository or distributed build artifacts.
+Personal data and credentials are never included in the repository or distributed build artifacts.
