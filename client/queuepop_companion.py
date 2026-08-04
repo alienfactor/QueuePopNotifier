@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.34."""
+"""Queue Pop Notifier – desktop client 0.3.37."""
 from __future__ import annotations
 
 import ctypes
@@ -19,11 +19,12 @@ from tkinter import messagebox, ttk
 import urllib.parse
 import urllib.request
 import urllib.error
+import webbrowser
 
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.34"
+APP_VERSION = "0.3.37"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -43,7 +44,7 @@ DEFAULTS = {
 TEXTS = {
     "de": {
         "starting": "Wird gestartet …", "searching_window": "Suche nach dem WoW-Fenster …",
-        "events": "EREIGNISSE", "notifications": "BENACHRICHTIGUNGEN",
+        "events": "EREIGNISSE", "notifications": "Benachrichtigungen",
         "active_ready": "Aktiv · bereit", "not_configured": "Nicht eingerichtet",
         "credentials_unverified": "Noch nicht geprüft", "credentials_checking": "Wird geprüft …",
         "credentials_invalid": "Zugangsdaten ungültig", "credentials_unavailable": "Prüfung nicht möglich",
@@ -51,10 +52,19 @@ TEXTS = {
         "show": "Anzeigen", "hide": "Verbergen", "language": "Sprache",
         "language_auto": "Automatisch (Windows)", "language_de": "Deutsch", "language_en": "English",
         "priority": "Priorität", "priority_normal": "Normal", "priority_high": "Hoch",
+        "settings_title": "Einstellungen", "settings_subtitle": "Queue Pop Notifier",
+        "pushover_intro": "Verbindet den Client mit deinem Smartphone.",
+        "user_key_help": "Dein persönlicher Empfängerschlüssel aus dem Pushover-Dashboard.",
+        "app_token_help": "Der Token deiner Anwendung „Queue Pop Notifier“ bei Pushover.",
+        "pushover_help": "Wo finde ich User Key und App-Token?  ↗",
+        "notifications_intro": "Lege fest, wie auffällig Queue-Meldungen erscheinen.",
+        "priority_normal_help": "Normal: Standardbenachrichtigung mit dem in Pushover gewählten Ton.",
+        "priority_high_help": "Hoch: Auffälligere Zustellung ohne Bestätigung – für iOS empfohlen.",
+        "general": "Allgemein",
         "start_with_windows": "Mit Windows starten",
-        "test_pushover": "Pushover testen", "save": "Speichern", "saved": "Gespeichert ✓",
+        "test_pushover": "Testnachricht senden", "save": "Speichern", "saved": "Gespeichert ✓",
         "tray_settings": "Einstellungen …",
-        "tray_status": "● {status}", "tray_version": "Queue Pop Notifier {version}",
+        "tray_status": "{indicator}  {status}", "tray_version": "Version {version} · Updates automatisch",
         "update_downloading": "Update {version} wird heruntergeladen …",
         "update_installing": "Update geprüft · Client wird neu gestartet",
         "update_install_failed_title": "Update fehlgeschlagen",
@@ -79,10 +89,10 @@ TEXTS = {
         "confirm_in_wow": "Jetzt in WoW bestätigen.",
         "queue_detected": "Queue erkannt · Benachrichtigung wird gesendet",
         "queue_no_pushover": "Queue erkannt · Pushover ist noch nicht eingerichtet",
-        "check_disturbed": "Prüfung gestört", "waiting_wow": "Warte auf WoW",
+        "check_disturbed": "Überwachung gestört · WoW kann gerade nicht geprüft werden", "waiting_wow": "Warte auf WoW",
         "wow_not_open": "WoW ist nicht geöffnet oder wurde noch nicht erkannt.",
-        "monitoring_active": "Überwachung aktiv", "wow_pop_ready": "WoW erkannt · bereit für Queue-Pops",
-        "client_searching": "Client aktiv · WoW wird gesucht", "client_started": "Client gestartet",
+        "monitoring_active": "WoW erkannt · Queue-Überwachung aktiv", "wow_pop_ready": "WoW erkannt · bereit für Queue-Pops",
+        "client_searching": "Client aktiv · wartet auf WoW", "client_started": "Client wird gestartet",
         "tray_open": "Öffnen", "tray_quit": "Beenden",
         "client_to_screen_failed": "Fensterposition konnte nicht ermittelt werden",
         "capture_error": "Bildschirmaufnahme fehlgeschlagen", "invalid_response": "Ungültige Antwort von Pushover",
@@ -90,7 +100,7 @@ TEXTS = {
     },
     "en": {
         "starting": "Starting …", "searching_window": "Looking for the WoW window …",
-        "events": "EVENTS", "notifications": "NOTIFICATIONS",
+        "events": "EVENTS", "notifications": "Notifications",
         "active_ready": "Active · ready", "not_configured": "Not configured",
         "credentials_unverified": "Not verified yet", "credentials_checking": "Checking …",
         "credentials_invalid": "Invalid credentials", "credentials_unavailable": "Could not verify",
@@ -98,10 +108,19 @@ TEXTS = {
         "show": "Show", "hide": "Hide", "language": "Language",
         "language_auto": "Automatic (Windows)", "language_de": "Deutsch", "language_en": "English",
         "priority": "Priority", "priority_normal": "Normal", "priority_high": "High",
+        "settings_title": "Settings", "settings_subtitle": "Queue Pop Notifier",
+        "pushover_intro": "Connects the client to your phone.",
+        "user_key_help": "Your personal recipient key from the Pushover dashboard.",
+        "app_token_help": "The token for your “Queue Pop Notifier” application in Pushover.",
+        "pushover_help": "Where do I find the User Key and App Token?  ↗",
+        "notifications_intro": "Choose how prominently queue alerts are delivered.",
+        "priority_normal_help": "Normal: Standard notification using your selected Pushover sound.",
+        "priority_high_help": "High: More prominent delivery without confirmation – recommended for iOS.",
+        "general": "General",
         "start_with_windows": "Start with Windows",
-        "test_pushover": "Test Pushover", "save": "Save", "saved": "Saved ✓",
+        "test_pushover": "Send test notification", "save": "Save", "saved": "Saved ✓",
         "tray_settings": "Settings …",
-        "tray_status": "● {status}", "tray_version": "Queue Pop Notifier {version}",
+        "tray_status": "{indicator}  {status}", "tray_version": "Version {version} · updates automatically",
         "update_downloading": "Downloading update {version} …",
         "update_installing": "Update verified · restarting client",
         "update_install_failed_title": "Update failed",
@@ -126,10 +145,10 @@ TEXTS = {
         "confirm_in_wow": "Confirm in WoW now.",
         "queue_detected": "Queue detected · sending notification",
         "queue_no_pushover": "Queue detected · Pushover is not configured yet",
-        "check_disturbed": "Check interrupted", "waiting_wow": "Waiting for WoW",
+        "check_disturbed": "Monitoring interrupted · WoW cannot be checked right now", "waiting_wow": "Waiting for WoW",
         "wow_not_open": "WoW is not open or has not been detected yet.",
-        "monitoring_active": "Monitoring active", "wow_pop_ready": "WoW detected · ready for queue pops",
-        "client_searching": "Client active · looking for WoW", "client_started": "Client started",
+        "monitoring_active": "WoW detected · queue monitoring active", "wow_pop_ready": "WoW detected · ready for queue pops",
+        "client_searching": "Client active · waiting for WoW", "client_started": "Client is starting",
         "tray_open": "Open", "tray_quit": "Quit",
         "client_to_screen_failed": "Could not determine the window position",
         "capture_error": "Screen capture failed", "invalid_response": "Invalid response from Pushover",
@@ -472,17 +491,25 @@ class CompanionApp(tk.Tk):
 
     def _refresh_language(self):
         """Apply the selected language to every persistent UI element."""
+        self.heading_label.configure(text=self._t("settings_title"))
+        self.pushover_intro_label.configure(text=self._t("pushover_intro"))
+        self.user_help_label.configure(text=self._t("user_key_help"))
+        self.token_help_label.configure(text=self._t("app_token_help"))
+        self.pushover_help_label.configure(text=self._t("pushover_help"))
+        self.notifications_intro_label.configure(text=self._t("notifications_intro"))
+        self.general_label.configure(text=self._t("general"))
         self.language_label.configure(text=self._t("language"))
         self.priority_label.configure(text=self._t("priority"))
         self.start_with_windows_check.configure(text=self._t("start_with_windows"))
         self.test_button.configure(text=self._t("test_pushover"))
         self.save_button.configure(text=self._t("save"))
-        self.user_eye.configure(text=self._t("hide") if self.user_entry.cget("show") == "" else self._t("show"))
-        self.token_eye.configure(text=self._t("hide") if self.token_entry.cget("show") == "" else self._t("show"))
+        self._update_eye_button("user")
+        self._update_eye_button("token")
         configured = bool(self.config_data["pushover_user_key"] and self.config_data["pushover_app_token"])
         self._set_pushover_state(self.pushover_validation_state if configured else "not_configured")
         self._set_language_combo()
         self._set_priority_combo()
+        self._update_priority_help()
         self._restart_tray()
         self._fit_window_height()
 
@@ -510,87 +537,164 @@ class CompanionApp(tk.Tk):
             pass
 
     def _build_ui(self):
-        root = ttk.Frame(self, padding=(14, 10, 14, 12))
-        root.pack(fill="both", expand=True)
+        self.configure(bg="#e7e7e7")
+        self.geometry("570x620")
+        self.minsize(570, 1)
+        bg, card, border = "#e7e7e7", "#f3f3f3", "#cccccc"
+        fg, muted, green, accent = "#202020", "#666666", "#287a3e", "#1769aa"
+        self._ui_colors = {"muted": muted, "green": green, "warning": "#9a6500", "error": "#b3261e"}
 
         style = ttk.Style(self)
-        style.configure("Hint.TLabel", foreground="#666666")
-        style.configure("Service.TLabel", font=("Segoe UI", 10, "bold"), foreground="#272727")
-        style.configure("ServiceState.TLabel", foreground="#39834d", font=("Segoe UI", 9))
-        style.configure("WarningState.TLabel", foreground="#a16b00", font=("Segoe UI", 9))
-        style.configure("ErrorState.TLabel", foreground="#b02a37", font=("Segoe UI", 9))
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+        style.configure("Dark.TEntry", fieldbackground="#ffffff", foreground=fg,
+                        insertcolor=fg, bordercolor=border, lightcolor=border, darkcolor=border,
+                        padding=(9, 7))
+        style.configure("Dark.TCombobox", fieldbackground="#ffffff", background="#dddddd",
+                        foreground=fg, arrowcolor=fg, bordercolor=border, lightcolor=border,
+                        darkcolor=border, padding=(8, 6))
+        style.map("Dark.TCombobox", fieldbackground=[("readonly", "#ffffff")],
+                  foreground=[("readonly", fg)], selectbackground=[("readonly", "#ffffff")])
+        style.configure("Dark.TCheckbutton", background=card, foreground=fg, font=("Segoe UI", 9))
+        style.map("Dark.TCheckbutton", background=[("active", card)], foreground=[("active", fg)])
+        style.configure("Secondary.TButton", background="#e2e2e2", foreground=fg,
+                        bordercolor="#bdbdbd", padding=(12, 7), font=("Segoe UI", 9))
+        style.map("Secondary.TButton", background=[("active", "#d5d5d5")])
+        style.configure("Primary.TButton", background="#3977bd", foreground="#ffffff",
+                        bordercolor="#3977bd", padding=(15, 7), font=("Segoe UI", 9, "bold"))
+        style.map("Primary.TButton", background=[("active", "#4788d1")])
 
-        settings_row = ttk.Frame(root)
-        settings_row.pack(fill="x")
-        service_text = ttk.Frame(settings_row)
-        service_text.pack(side="left", fill="x", expand=True)
-        ttk.Label(service_text, text="Pushover", style="Service.TLabel").pack(anchor="w")
+        root = tk.Frame(self, bg=bg, padx=14, pady=14)
+        root.pack(fill="both", expand=True)
+        header = tk.Frame(root, bg=bg)
+        header.pack(fill="x", padx=4, pady=(0, 13))
+        self.heading_label = tk.Label(header, text=self._t("settings_title"), bg=bg, fg=fg,
+                                      font=("Segoe UI", 15, "bold"))
+        self.heading_label.pack(anchor="w")
+
+        def card_frame():
+            shell = tk.Frame(root, bg=border, padx=1, pady=1)
+            shell.pack(fill="x", pady=(0, 10))
+            body = tk.Frame(shell, bg=card, padx=16, pady=14)
+            body.pack(fill="both")
+            return body
+
+        self.settings_frame = card_frame()
+        top = tk.Frame(self.settings_frame, bg=card)
+        top.grid(row=0, column=0, columnspan=2, sticky="ew")
+        tk.Label(top, text="Pushover", bg=card, fg=fg, font=("Segoe UI", 11, "bold")).pack(anchor="w")
+        self.pushover_intro_label = tk.Label(top, text=self._t("pushover_intro"), bg=card, fg=muted,
+                                             font=("Segoe UI", 8))
+        self.pushover_intro_label.pack(anchor="w", pady=(2, 0))
         configured = bool(self.config_data["pushover_user_key"] and self.config_data["pushover_app_token"])
-        self.pushover_state = ttk.Label(
-            service_text,
-            text=self._t("credentials_unverified") if configured else self._t("not_configured"),
-            style="Hint.TLabel",
-        )
-        self.pushover_state.pack(anchor="w", pady=(1, 0))
-        self.settings_frame = ttk.Frame(root, padding=(0, 12, 0, 0))
-        self.settings_frame.pack(fill="x")
-        ttk.Label(self.settings_frame, text="User Key").grid(row=0, column=0, sticky="w")
+        self.pushover_state = tk.Label(top, bg=card, fg=muted, font=("Segoe UI", 8),
+                                       text=self._t("credentials_unverified") if configured else self._t("not_configured"))
+        self.pushover_state.place(relx=1.0, x=0, y=2, anchor="ne")
+
+        tk.Label(self.settings_frame, text="User Key", bg=card, fg=fg,
+                 font=("Segoe UI", 9, "bold")).grid(row=1, column=0, columnspan=2, sticky="w", pady=(14, 0))
+        self.user_help_label = tk.Label(self.settings_frame, text=self._t("user_key_help"), bg=card, fg=muted,
+                                        font=("Segoe UI", 8))
+        self.user_help_label.grid(row=2, column=0, columnspan=2, sticky="w", pady=(1, 6))
         self.user_var = tk.StringVar(value=self.config_data["pushover_user_key"])
-        self.user_entry = ttk.Entry(self.settings_frame, textvariable=self.user_var, show="•")
-        self.user_entry.grid(row=0, column=1, sticky="ew", padx=(12, 0))
-        self.user_eye = ttk.Button(self.settings_frame, text=self._t("show"), width=9, command=lambda: self._toggle_secret("user"))
-        self.user_eye.grid(row=0, column=2, padx=(6, 0))
-        ttk.Label(self.settings_frame, text="App/API Token").grid(row=1, column=0, sticky="w", pady=(8, 0))
+        self.user_entry = ttk.Entry(self.settings_frame, textvariable=self.user_var, show="•", style="Dark.TEntry")
+        self.user_entry.grid(row=3, column=0, sticky="ew")
+        self.user_eye = tk.Button(self.settings_frame, text="\ue7b3", width=3, relief="flat", bd=0,
+                                  bg=card, fg=muted, activebackground="#dddddd", activeforeground=accent,
+                                  cursor="hand2", font=("Segoe MDL2 Assets", 11),
+                                  command=lambda: self._toggle_secret("user"))
+        self.user_eye.grid(row=3, column=1, padx=(7, 0))
+        tk.Label(self.settings_frame, text="App/API Token", bg=card, fg=fg,
+                 font=("Segoe UI", 9, "bold")).grid(row=4, column=0, columnspan=2, sticky="w", pady=(13, 0))
+        self.token_help_label = tk.Label(self.settings_frame, text=self._t("app_token_help"), bg=card, fg=muted,
+                                         font=("Segoe UI", 8))
+        self.token_help_label.grid(row=5, column=0, columnspan=2, sticky="w", pady=(1, 6))
         self.token_var = tk.StringVar(value=self.config_data["pushover_app_token"])
-        self.token_entry = ttk.Entry(self.settings_frame, textvariable=self.token_var, show="•")
-        self.token_entry.grid(row=1, column=1, sticky="ew", padx=(12, 0), pady=(8, 0))
-        self.token_eye = ttk.Button(self.settings_frame, text=self._t("show"), width=9, command=lambda: self._toggle_secret("token"))
-        self.token_eye.grid(row=1, column=2, padx=(6, 0), pady=(8, 0))
-        self.language_label = ttk.Label(self.settings_frame, text=self._t("language"))
-        self.language_label.grid(row=2, column=0, sticky="w", pady=(8, 0))
+        self.token_entry = ttk.Entry(self.settings_frame, textvariable=self.token_var, show="•", style="Dark.TEntry")
+        self.token_entry.grid(row=6, column=0, sticky="ew")
+        self.token_eye = tk.Button(self.settings_frame, text="\ue7b3", width=3, relief="flat", bd=0,
+                                   bg=card, fg=muted, activebackground="#dddddd", activeforeground=accent,
+                                   cursor="hand2", font=("Segoe MDL2 Assets", 11),
+                                   command=lambda: self._toggle_secret("token"))
+        self.token_eye.grid(row=6, column=1, padx=(7, 0))
+        self.pushover_help_label = tk.Label(self.settings_frame, text=self._t("pushover_help"), bg=card,
+                                            fg=accent, cursor="hand2", font=("Segoe UI", 8, "underline"))
+        self.pushover_help_label.grid(row=7, column=0, columnspan=2, sticky="w", pady=(11, 0))
+        self.pushover_help_label.bind("<Button-1>", lambda _event: webbrowser.open("https://pushover.net/apps/build"))
+        self.settings_frame.columnconfigure(0, weight=1)
+
+        notification_card = card_frame()
+        tk.Label(notification_card, text=self._t("notifications"), bg=card, fg=fg,
+                 font=("Segoe UI", 11, "bold")).grid(row=0, column=0, columnspan=2, sticky="w")
+        self.notifications_intro_label = tk.Label(notification_card, text=self._t("notifications_intro"),
+                                                   bg=card, fg=muted, font=("Segoe UI", 8))
+        self.notifications_intro_label.grid(row=1, column=0, columnspan=2, sticky="w", pady=(2, 12))
+        self.priority_label = tk.Label(notification_card, text=self._t("priority"), bg=card, fg=fg,
+                                       font=("Segoe UI", 9, "bold"))
+        self.priority_label.grid(row=2, column=0, sticky="w")
+        self.priority_help_label = tk.Label(notification_card, text="", bg=card, fg=muted,
+                                            justify="left", wraplength=310, font=("Segoe UI", 8))
+        self.priority_help_label.grid(row=2, column=1, rowspan=2, sticky="sw", padx=(18, 0))
         self.language_var = tk.StringVar()
-        self.language_combo = ttk.Combobox(self.settings_frame, textvariable=self.language_var, state="readonly", width=23)
-        self.language_combo.grid(row=2, column=1, sticky="w", padx=(12, 0), pady=(8, 0))
-        self._set_language_combo()
-        self.priority_label = ttk.Label(self.settings_frame, text=self._t("priority"))
-        self.priority_label.grid(row=3, column=0, sticky="w", pady=(8, 0))
         self.priority_var = tk.StringVar()
-        self.priority_combo = ttk.Combobox(self.settings_frame, textvariable=self.priority_var, state="readonly", width=23)
-        self.priority_combo.grid(row=3, column=1, sticky="w", padx=(12, 0), pady=(8, 0))
+        self.priority_combo = ttk.Combobox(notification_card, textvariable=self.priority_var,
+                                           state="readonly", width=18, style="Dark.TCombobox")
+        self.priority_combo.grid(row=3, column=0, sticky="w", pady=(5, 0))
         self._set_priority_combo()
+        self.priority_combo.bind("<<ComboboxSelected>>", lambda _event: self._update_priority_help())
+        self._update_priority_help()
+
+        general_card = card_frame()
+        self.general_label = tk.Label(general_card, text=self._t("general"), bg=card, fg=fg,
+                                      font=("Segoe UI", 11, "bold"))
+        self.general_label.grid(row=0, column=0, sticky="w")
         self.start_with_windows_var = tk.BooleanVar(
             value=bool(self.config_data.get("start_with_windows", False))
         )
         self.start_with_windows_check = ttk.Checkbutton(
-            self.settings_frame,
+            general_card,
             text=self._t("start_with_windows"),
             variable=self.start_with_windows_var,
+            style="Dark.TCheckbutton",
         )
-        self.start_with_windows_check.grid(
-            row=4, column=1, columnspan=2, sticky="w", padx=(12, 0), pady=(8, 0)
-        )
-        actions = ttk.Frame(self.settings_frame)
-        actions.grid(row=5, column=0, columnspan=3, sticky="e", pady=(10, 0))
-        self.test_button = ttk.Button(actions, text=self._t("test_pushover"), command=self._test_push)
+        self.start_with_windows_check.grid(row=1, column=0, sticky="w", pady=(10, 0))
+        self.language_label = tk.Label(general_card, text=self._t("language"), bg=card, fg=fg,
+                                       font=("Segoe UI", 9, "bold"))
+        self.language_label.grid(row=0, column=1, sticky="w", padx=(30, 0))
+        self.language_combo = ttk.Combobox(general_card, textvariable=self.language_var,
+                                           state="readonly", width=22, style="Dark.TCombobox")
+        self.language_combo.grid(row=1, column=1, sticky="e", padx=(30, 0), pady=(5, 0))
+        self._set_language_combo()
+        general_card.columnconfigure(0, weight=1)
+
+        actions = tk.Frame(root, bg=bg)
+        actions.pack(fill="x", pady=(2, 0))
+        self.test_button = ttk.Button(actions, text=self._t("test_pushover"), style="Secondary.TButton",
+                                      command=self._test_push)
         self.test_button.pack(side="left", padx=(0, 8))
-        self.save_button = ttk.Button(actions, text=self._t("save"), command=self._save)
-        self.save_button.pack(side="left")
-        self.settings_frame.columnconfigure(1, weight=1)
+        self.save_button = ttk.Button(actions, text=self._t("save"), style="Primary.TButton", command=self._save)
+        self.save_button.pack(side="right")
         self.user_var.trace_add("write", self._credentials_changed)
         self.token_var.trace_add("write", self._credentials_changed)
+
+    def _update_priority_help(self):
+        key = "priority_normal_help" if self.priority_var.get() == self._t("priority_normal") else "priority_high_help"
+        self.priority_help_label.configure(text=self._t(key))
 
     def _set_pushover_state(self, state):
         self.pushover_validation_state = state
         styles = {
-            "valid": ("active_ready", "ServiceState.TLabel"),
-            "invalid": ("credentials_invalid", "ErrorState.TLabel"),
-            "unavailable": ("credentials_unavailable", "WarningState.TLabel"),
-            "checking": ("credentials_checking", "Hint.TLabel"),
-            "unverified": ("credentials_unverified", "Hint.TLabel"),
-            "not_configured": ("not_configured", "Hint.TLabel"),
+            "valid": ("active_ready", self._ui_colors["green"]),
+            "invalid": ("credentials_invalid", self._ui_colors["error"]),
+            "unavailable": ("credentials_unavailable", self._ui_colors["warning"]),
+            "checking": ("credentials_checking", self._ui_colors["muted"]),
+            "unverified": ("credentials_unverified", self._ui_colors["muted"]),
+            "not_configured": ("not_configured", self._ui_colors["muted"]),
         }
-        key, style = styles[state]
-        self.pushover_state.configure(text=self._t(key), style=style)
+        key, color = styles[state]
+        self.pushover_state.configure(text=self._t(key), fg=color)
 
     def _credentials_changed(self, *_args):
         self.validation_generation += 1
@@ -600,10 +704,15 @@ class CompanionApp(tk.Tk):
     def _toggle_secret(self, which):
         """Blendet User Key oder Token ein und wieder aus."""
         entry = self.user_entry if which == "user" else self.token_entry
-        button = self.user_eye if which == "user" else self.token_eye
         visible = entry.cget("show") == ""
         entry.configure(show="•" if visible else "")
-        button.configure(text=self._t("show") if visible else self._t("hide"))
+        self._update_eye_button(which)
+
+    def _update_eye_button(self, which):
+        """Hebt das Auge dezent hervor, solange der jeweilige Schlüssel sichtbar ist."""
+        entry = self.user_entry if which == "user" else self.token_entry
+        button = self.user_eye if which == "user" else self.token_eye
+        button.configure(fg="#1769aa" if entry.cget("show") == "" else self._ui_colors["muted"])
 
     def _open_settings(self):
         self._show_window()
@@ -612,8 +721,8 @@ class CompanionApp(tk.Tk):
         """Passt die feste Fensterhöhe ohne ungenutzten Leerraum an den Inhalt an."""
         self.update_idletasks()
         wanted_height = self.winfo_reqheight()
-        self.minsize(400, wanted_height)
-        self.geometry(f"{max(self.winfo_width(), 410)}x{wanted_height}")
+        self.minsize(570, wanted_height)
+        self.geometry(f"570x{wanted_height}")
 
     def _current_config(self):
         self.config_data["pushover_user_key"] = self.user_var.get().strip()
@@ -812,7 +921,7 @@ class CompanionApp(tk.Tk):
             from PIL import Image
             image = Image.open(ICON_PATH)
             menu = pystray.Menu(
-                pystray.MenuItem(lambda _item: self._tray_status_text(), None, enabled=False),
+                pystray.MenuItem(lambda _item: self._tray_status_text(), lambda *_: None),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem(self._t("tray_settings"), lambda *_: self.after(0, self._open_settings), default=True),
                 pystray.Menu.SEPARATOR,
@@ -827,14 +936,21 @@ class CompanionApp(tk.Tk):
     def _tray_status_text(self):
         kind = getattr(self, "current_status_kind", None)
         if kind == "error":
+            indicator = "!"
             status = self._t("check_disturbed")
         elif kind == "waiting":
-            status = self._t("waiting_wow")
+            indicator = "…"
+            status = self._t("client_searching")
         elif kind is None:
-            status = self._t("starting")
+            indicator = "…"
+            status = self._t("client_started")
+        elif not self.wow_available:
+            indicator = "…"
+            status = self._t("client_searching")
         else:
+            indicator = "✓"
             status = self._t("monitoring_active")
-        return self._t("tray_status", status=status)
+        return self._t("tray_status", indicator=indicator, status=status)
 
     @staticmethod
     def _version_tuple(value):
