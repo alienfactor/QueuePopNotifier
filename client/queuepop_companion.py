@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.40."""
+"""Queue Pop Notifier – desktop client 0.3.41."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.40"
+APP_VERSION = "0.3.41"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -1106,6 +1106,7 @@ try {
   Move-Item -LiteralPath $Target -Destination $backup -Force
   try {
     Move-Item -LiteralPath $Source -Destination $Target -Force
+    $env:PYINSTALLER_RESET_ENVIRONMENT = '1'
     $newProcess = Start-Process -FilePath $Target -PassThru
     Start-Sleep -Seconds 3
     if ($newProcess.HasExited) { throw 'Der aktualisierte Client wurde unerwartet beendet.' }
@@ -1117,6 +1118,7 @@ try {
     }
     if (Test-Path -LiteralPath $Target) { Remove-Item -LiteralPath $Target -Force }
     Move-Item -LiteralPath $backup -Destination $Target -Force
+    $env:PYINSTALLER_RESET_ENVIRONMENT = '1'
     Start-Process -FilePath $Target
     throw
   }
