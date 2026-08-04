@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.45."""
+"""Queue Pop Notifier – desktop client 0.3.46."""
 from __future__ import annotations
 
 import ctypes
@@ -24,8 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.45"
-APP_USER_MODEL_ID = "UniQueue.QueuePopNotifier"
+APP_VERSION = "0.3.46"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -42,24 +41,6 @@ DEFAULTS = {
     "start_with_windows": False,
 }
 
-
-def configure_windows_app_identity():
-    """Give native Windows notifications a stable name and application icon."""
-    if os.name != "nt":
-        return
-    try:
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(APP_USER_MODEL_ID)
-        icon_source = Path(sys.executable).resolve() if getattr(sys, "frozen", False) else ICON_PATH.resolve()
-        with winreg.CreateKey(
-            winreg.HKEY_CURRENT_USER,
-            rf"Software\Classes\AppUserModelId\{APP_USER_MODEL_ID}",
-        ) as key:
-            winreg.SetValueEx(key, "DisplayName", 0, winreg.REG_SZ, "Queue Pop Notifier")
-            winreg.SetValueEx(key, "IconUri", 0, winreg.REG_SZ, str(icon_source))
-    except OSError:
-        # Identity metadata improves notification presentation but must never
-        # prevent queue detection from starting.
-        pass
 
 TEXTS = {
     "de": {
@@ -84,11 +65,9 @@ TEXTS = {
         "start_with_windows": "Mit Windows starten",
         "test_pushover": "Testnachricht senden", "save": "Speichern", "saved": "Gespeichert ✓",
         "tray_settings": "Einstellungen …", "tray_report_issue": "Problem melden",
-        "tray_status": "{status}", "version": "Version {version}",
+        "tray_status": "{status}", "version": "Version {version} · Updates werden automatisch installiert",
         "update_downloading": "Update wird heruntergeladen",
         "update_installing": "Update wird installiert",
-        "update_notice_title": "Update wird installiert",
-        "update_notice_message": "Version {version} wurde heruntergeladen und wird jetzt installiert. Der Client startet anschließend neu.",
         "update_install_failed_title": "Update fehlgeschlagen",
         "update_install_failed_message": "Das Update konnte nicht installiert werden: {error}",
         "update_checksum_failed": "Die Prüfsumme der heruntergeladenen EXE stimmt nicht.",
@@ -142,11 +121,9 @@ TEXTS = {
         "start_with_windows": "Start with Windows",
         "test_pushover": "Send test notification", "save": "Save", "saved": "Saved ✓",
         "tray_settings": "Settings …", "tray_report_issue": "Report an issue",
-        "tray_status": "{status}", "version": "Version {version}",
+        "tray_status": "{status}", "version": "Version {version} · Updates are installed automatically",
         "update_downloading": "Downloading update",
         "update_installing": "Installing update",
-        "update_notice_title": "Installing update",
-        "update_notice_message": "Version {version} has been downloaded and will now be installed. The client will then restart.",
         "update_install_failed_title": "Update failed",
         "update_install_failed_message": "The update could not be installed: {error}",
         "update_checksum_failed": "The downloaded EXE checksum does not match.",
@@ -1059,19 +1036,7 @@ class CompanionApp(tk.Tk):
             return
         self.update_in_progress = True
         self._set_status("status", self._t("update_downloading"))
-        self._notify_tray(
-            self._t("update_notice_title"),
-            self._t("update_downloading"),
-        )
         threading.Thread(target=self._download_update_worker, daemon=True).start()
-
-    def _notify_tray(self, title, message):
-        if not self.tray_icon:
-            return
-        try:
-            self.tray_icon.notify(message, title)
-        except Exception:
-            pass
 
     def _download_update_worker(self):
         try:
@@ -1166,10 +1131,6 @@ try {
                 creationflags=creation_flags,
             )
             self._set_status("status", self._t("update_installing"))
-            self._notify_tray(
-                self._t("update_notice_title"),
-                self._t("update_notice_message", version=self.available_version),
-            )
             self._terminate_for_update()
         except Exception as exc:
             self._update_install_failed(str(exc))
@@ -1228,7 +1189,6 @@ try {
 
 
 if __name__ == "__main__":
-    configure_windows_app_identity()
     _instance_mutex = acquire_single_instance()
     if _instance_mutex is False:
         raise SystemExit(0)

@@ -51,7 +51,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QueuePopNotifier_Client_v0.3.45_Windows
+          name: QueuePopNotifier_Client_v0.3.46_Windows
           path: |
             dist/QueuePopNotifier.exe
             dist/QueuePopNotifier.exe.sha256
@@ -70,7 +70,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
           if (-not (git diff --cached --quiet)) {
-            git commit -m "Build Windows client 0.3.45"
+            git commit -m "Build Windows client 0.3.46"
             git push
           }
 
@@ -79,9 +79,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.3.45"
-          $title = "Queue Pop Notifier 0.3.45"
-          $notes = "Gives Windows update notifications the correct Queue Pop Notifier identity and icon, and right-aligns the version label in Settings."
+          $tag = "v0.3.46"
+          $title = "Queue Pop Notifier 0.3.46"
+          $notes = "Adds an automatic-update note to the Settings version line and removes unreliable success notifications. Successful updates now run silently; genuine update failures remain visible."
           gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag dist/QueuePopNotifier.exe dist/QueuePopNotifier.exe.sha256 --clobber
