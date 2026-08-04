@@ -1,13 +1,17 @@
-"""Queue Pop Notifier – desktop client 0.3.31."""
+"""Queue Pop Notifier – desktop client 0.3.34."""
 from __future__ import annotations
 
 import ctypes
 from ctypes import wintypes
+import hashlib
 import json
 import locale
 import os
 from pathlib import Path
 import queue
+import subprocess
+import sys
+import tempfile
 import threading
 import time
 import tkinter as tk
@@ -15,9 +19,11 @@ from tkinter import messagebox, ttk
 import urllib.parse
 import urllib.request
 import urllib.error
-import webbrowser
 
-APP_VERSION = "0.3.31"
+if os.name == "nt":
+    import winreg
+
+APP_VERSION = "0.3.34"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -31,7 +37,7 @@ DEFAULTS = {
     "confirm_frames": 3,
     "language": "auto",
     "pushover_priority": 1,
-    "last_update_check": 0,
+    "start_with_windows": False,
 }
 
 TEXTS = {
@@ -45,14 +51,15 @@ TEXTS = {
         "show": "Anzeigen", "hide": "Verbergen", "language": "Sprache",
         "language_auto": "Automatisch (Windows)", "language_de": "Deutsch", "language_en": "English",
         "priority": "Priorität", "priority_normal": "Normal", "priority_high": "Hoch",
+        "start_with_windows": "Mit Windows starten",
         "test_pushover": "Pushover testen", "save": "Speichern", "saved": "Gespeichert ✓",
         "tray_settings": "Einstellungen …",
-        "tray_check_updates": "Nach Updates suchen", "tray_update_available": "Update verfügbar: {version} …",
         "tray_status": "● {status}", "tray_version": "Queue Pop Notifier {version}",
-        "update_available_title": "Update verfügbar", "update_available_message": "Queue Pop Notifier {version} ist verfügbar.",
-        "update_current_title": "Kein Update verfügbar", "update_current_message": "Du verwendest bereits die neueste Version ({version}).",
-        "update_failed_title": "Updateprüfung fehlgeschlagen", "update_failed_message": "GitHub konnte nicht geprüft werden: {error}",
-        "update_not_configured": "Das GitHub-Repository ist noch nicht hinterlegt.",
+        "update_downloading": "Update {version} wird heruntergeladen …",
+        "update_installing": "Update geprüft · Client wird neu gestartet",
+        "update_install_failed_title": "Update fehlgeschlagen",
+        "update_install_failed_message": "Das Update konnte nicht installiert werden: {error}",
+        "update_checksum_failed": "Die Prüfsumme der heruntergeladenen EXE stimmt nicht.",
         "missing_title": "Fehlende Daten", "missing_message": "Bitte User Key und App/API Token eintragen.",
         "connection_test": "Verbindungstest", "connection_test_message": "Queue Pop Notifier ist verbunden.",
         "pushover_connected": "Pushover verbunden · Benachrichtigungen sind bereit",
@@ -91,14 +98,15 @@ TEXTS = {
         "show": "Show", "hide": "Hide", "language": "Language",
         "language_auto": "Automatic (Windows)", "language_de": "Deutsch", "language_en": "English",
         "priority": "Priority", "priority_normal": "Normal", "priority_high": "High",
+        "start_with_windows": "Start with Windows",
         "test_pushover": "Test Pushover", "save": "Save", "saved": "Saved ✓",
         "tray_settings": "Settings …",
-        "tray_check_updates": "Check for updates", "tray_update_available": "Update available: {version} …",
         "tray_status": "● {status}", "tray_version": "Queue Pop Notifier {version}",
-        "update_available_title": "Update available", "update_available_message": "Queue Pop Notifier {version} is available.",
-        "update_current_title": "No update available", "update_current_message": "You already have the latest version ({version}).",
-        "update_failed_title": "Update check failed", "update_failed_message": "GitHub could not be checked: {error}",
-        "update_not_configured": "The GitHub repository has not been configured yet.",
+        "update_downloading": "Downloading update {version} …",
+        "update_installing": "Update verified · restarting client",
+        "update_install_failed_title": "Update failed",
+        "update_install_failed_message": "The update could not be installed: {error}",
+        "update_checksum_failed": "The downloaded EXE checksum does not match.",
         "missing_title": "Missing information", "missing_message": "Please enter the User Key and App/API Token.",
         "connection_test": "Connection test", "connection_test_message": "Queue Pop Notifier is connected.",
         "pushover_connected": "Pushover connected · notifications are ready",
@@ -163,6 +171,29 @@ def load_config() -> dict:
 def save_config(data: dict) -> None:
     APP_DIR.mkdir(parents=True, exist_ok=True)
     CONFIG_PATH.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def set_windows_startup(enabled: bool) -> None:
+    """Create or remove the per-user Windows startup entry."""
+    if os.name != "nt":
+        return
+    run_key = r"Software\Microsoft\Windows\CurrentVersion\Run"
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, run_key, 0, winreg.KEY_SET_VALUE) as key:
+            if enabled:
+                executable = Path(sys.executable if getattr(sys, "frozen", False) else __file__).resolve()
+                command = f'"{executable}"'
+                if not getattr(sys, "frozen", False):
+                    command = f'"{Path(sys.executable).resolve()}" "{executable}"'
+                winreg.SetValueEx(key, "QueuePopNotifier", 0, winreg.REG_SZ, command)
+            else:
+                try:
+                    winreg.DeleteValue(key, "QueuePopNotifier")
+                except FileNotFoundError:
+                    pass
+    except OSError:
+        # Startup integration must never prevent the notifier from running.
+        pass
 
 
 def find_wow_window() -> tuple[int, str] | tuple[None, None]:
@@ -380,6 +411,8 @@ class CompanionApp(tk.Tk):
             except tk.TclError:
                 pass
         self.config_data = load_config()
+        if self.config_data.get("start_with_windows", False):
+            set_windows_startup(True)
         self.is_configured = bool(
             self.config_data["pushover_user_key"] and self.config_data["pushover_app_token"])
         if self.is_configured:
@@ -402,7 +435,9 @@ class CompanionApp(tk.Tk):
         self.last_history_text = None
         self.history_entries = []
         self.available_version = None
-        self.release_url = None
+        self.update_asset_url = None
+        self.update_checksum_url = None
+        self.update_in_progress = False
         self._build_ui()
         if self.is_configured:
             self.after(150, self._validate_pushover_async)
@@ -415,8 +450,8 @@ class CompanionApp(tk.Tk):
         self._start_monitoring()
         if not self.is_configured:
             self.after(100, self._open_settings)
-        if GITHUB_REPOSITORY and time.time() - float(self.config_data.get("last_update_check", 0)) >= 86400:
-            self.after(1000, lambda: self._check_for_updates(silent=True))
+        if GITHUB_REPOSITORY:
+            self.after(1000, self._check_for_updates)
 
     def _t(self, key, **values):
         return TEXTS[self.language][key].format(**values)
@@ -439,6 +474,7 @@ class CompanionApp(tk.Tk):
         """Apply the selected language to every persistent UI element."""
         self.language_label.configure(text=self._t("language"))
         self.priority_label.configure(text=self._t("priority"))
+        self.start_with_windows_check.configure(text=self._t("start_with_windows"))
         self.test_button.configure(text=self._t("test_pushover"))
         self.save_button.configure(text=self._t("save"))
         self.user_eye.configure(text=self._t("hide") if self.user_entry.cget("show") == "" else self._t("show"))
@@ -522,8 +558,19 @@ class CompanionApp(tk.Tk):
         self.priority_combo = ttk.Combobox(self.settings_frame, textvariable=self.priority_var, state="readonly", width=23)
         self.priority_combo.grid(row=3, column=1, sticky="w", padx=(12, 0), pady=(8, 0))
         self._set_priority_combo()
+        self.start_with_windows_var = tk.BooleanVar(
+            value=bool(self.config_data.get("start_with_windows", False))
+        )
+        self.start_with_windows_check = ttk.Checkbutton(
+            self.settings_frame,
+            text=self._t("start_with_windows"),
+            variable=self.start_with_windows_var,
+        )
+        self.start_with_windows_check.grid(
+            row=4, column=1, columnspan=2, sticky="w", padx=(12, 0), pady=(8, 0)
+        )
         actions = ttk.Frame(self.settings_frame)
-        actions.grid(row=4, column=0, columnspan=3, sticky="e", pady=(10, 0))
+        actions.grid(row=5, column=0, columnspan=3, sticky="e", pady=(10, 0))
         self.test_button = ttk.Button(actions, text=self._t("test_pushover"), command=self._test_push)
         self.test_button.pack(side="left", padx=(0, 8))
         self.save_button = ttk.Button(actions, text=self._t("save"), command=self._save)
@@ -580,10 +627,12 @@ class CompanionApp(tk.Tk):
             self._t("priority_normal"): 0, self._t("priority_high"): 1,
         }
         self.config_data["pushover_priority"] = priority_values.get(self.priority_var.get(), 1)
+        self.config_data["start_with_windows"] = bool(self.start_with_windows_var.get())
         return self.config_data
 
     def _save(self):
         save_config(self._current_config())
+        set_windows_startup(self.config_data.get("start_with_windows", False))
         configured = bool(self.config_data["pushover_user_key"] and self.config_data["pushover_app_token"])
         requested = self.config_data.get("language", "auto")
         self.language = windows_language() if requested == "auto" else requested
@@ -766,7 +815,6 @@ class CompanionApp(tk.Tk):
                 pystray.MenuItem(lambda _item: self._tray_status_text(), None, enabled=False),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem(self._t("tray_settings"), lambda *_: self.after(0, self._open_settings), default=True),
-                pystray.MenuItem(lambda _item: self._tray_update_text(), lambda *_: self.after(0, self._handle_update_menu)),
                 pystray.Menu.SEPARATOR,
                 pystray.MenuItem(self._t("tray_version", version=APP_VERSION), None, enabled=False),
                 pystray.MenuItem(self._t("tray_quit"), lambda *_: self.after(0, self._quit_app)),
@@ -788,17 +836,6 @@ class CompanionApp(tk.Tk):
             status = self._t("monitoring_active")
         return self._t("tray_status", status=status)
 
-    def _tray_update_text(self):
-        if self.available_version:
-            return self._t("tray_update_available", version=self.available_version)
-        return self._t("tray_check_updates")
-
-    def _handle_update_menu(self):
-        if self.available_version and self.release_url:
-            webbrowser.open(self.release_url)
-        else:
-            self._check_for_updates(silent=False)
-
     @staticmethod
     def _version_tuple(value):
         try:
@@ -806,14 +843,10 @@ class CompanionApp(tk.Tk):
         except (AttributeError, ValueError):
             return ()
 
-    def _check_for_updates(self, silent=False):
-        if not GITHUB_REPOSITORY:
-            if not silent:
-                messagebox.showinfo(self._t("update_failed_title"), self._t("update_not_configured"))
-            return
-        threading.Thread(target=self._update_worker, args=(silent,), daemon=True).start()
+    def _check_for_updates(self):
+        threading.Thread(target=self._update_worker, daemon=True).start()
 
-    def _update_worker(self, silent):
+    def _update_worker(self):
         try:
             api_url = f"https://api.github.com/repos/{GITHUB_REPOSITORY}/releases/latest"
             request = urllib.request.Request(api_url, headers={
@@ -825,28 +858,115 @@ class CompanionApp(tk.Tk):
             latest = str(release.get("tag_name", "")).lstrip("vV")
             if not self._version_tuple(latest):
                 raise RuntimeError("invalid release version")
-            self.config_data["last_update_check"] = int(time.time())
-            save_config(self.config_data)
             if self._version_tuple(latest) > self._version_tuple(APP_VERSION):
+                assets = release.get("assets") or []
+                exe_asset = next(
+                    (asset for asset in assets if str(asset.get("name", "")).lower() == "queuepopnotifier.exe"),
+                    None,
+                )
+                checksum_asset = next(
+                    (asset for asset in assets if str(asset.get("name", "")).lower() == "queuepopnotifier.exe.sha256"),
+                    None,
+                )
                 self.available_version = latest
-                self.release_url = release.get("html_url") or f"https://github.com/{GITHUB_REPOSITORY}/releases/latest"
-                self.after(0, self._update_menu_and_notify, latest)
-            elif not silent:
-                self.after(0, lambda: messagebox.showinfo(
-                    self._t("update_current_title"), self._t("update_current_message", version=APP_VERSION)))
-        except Exception as exc:
-            if not silent:
-                self.after(0, lambda error=str(exc): messagebox.showerror(
-                    self._t("update_failed_title"), self._t("update_failed_message", error=error)))
+                self.update_asset_url = exe_asset.get("browser_download_url") if exe_asset else None
+                self.update_checksum_url = checksum_asset.get("browser_download_url") if checksum_asset else None
+                self.after(0, self._start_automatic_update)
+        except Exception:
+            # Startup checks are intentionally silent. A temporary network or
+            # GitHub failure must not interrupt the notifier.
+            pass
 
-    def _update_menu_and_notify(self, version):
-        if self.tray_icon:
-            try:
-                self.tray_icon.update_menu()
-                self.tray_icon.notify(
-                    self._t("update_available_message", version=version), self._t("update_available_title"))
-            except Exception:
-                pass
+    def _start_automatic_update(self):
+        if self.update_in_progress:
+            return
+        if not getattr(sys, "frozen", False) or os.name != "nt":
+            return
+        if not self.update_asset_url or not self.update_checksum_url:
+            return
+        self.update_in_progress = True
+        self._set_status("status", self._t("update_downloading", version=self.available_version))
+        threading.Thread(target=self._download_update_worker, daemon=True).start()
+
+    def _download_update_worker(self):
+        try:
+            headers = {"User-Agent": f"QueuePopNotifier/{APP_VERSION}"}
+            checksum_request = urllib.request.Request(self.update_checksum_url, headers=headers)
+            with urllib.request.urlopen(checksum_request, timeout=20) as response:
+                checksum_text = response.read(4096).decode("ascii", errors="strict").strip()
+            expected_hash = checksum_text.split()[0].lower()
+            if len(expected_hash) != 64 or any(char not in "0123456789abcdef" for char in expected_hash):
+                raise RuntimeError(self._t("update_checksum_failed"))
+
+            update_dir = Path(tempfile.mkdtemp(prefix="QueuePopNotifier-update-"))
+            downloaded_exe = update_dir / "QueuePopNotifier.exe"
+            digest = hashlib.sha256()
+            exe_request = urllib.request.Request(self.update_asset_url, headers=headers)
+            with urllib.request.urlopen(exe_request, timeout=60) as response, downloaded_exe.open("wb") as output:
+                while True:
+                    chunk = response.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    output.write(chunk)
+                    digest.update(chunk)
+            if digest.hexdigest().lower() != expected_hash:
+                raise RuntimeError(self._t("update_checksum_failed"))
+
+            updater_script = update_dir / "install-update.ps1"
+            updater_script.write_text(
+                """param([int]$CurrentPid, [string]$Source, [string]$Target)
+$ErrorActionPreference = 'Stop'
+$backup = "$Target.old"
+try {
+  Wait-Process -Id $CurrentPid -Timeout 30 -ErrorAction SilentlyContinue
+  if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Force }
+  Move-Item -LiteralPath $Target -Destination $backup -Force
+  try {
+    Move-Item -LiteralPath $Source -Destination $Target -Force
+    Start-Process -FilePath $Target
+    Start-Sleep -Seconds 2
+    Remove-Item -LiteralPath $backup -Force -ErrorAction SilentlyContinue
+  } catch {
+    if (Test-Path -LiteralPath $Target) { Remove-Item -LiteralPath $Target -Force }
+    Move-Item -LiteralPath $backup -Destination $Target -Force
+    Start-Process -FilePath $Target
+    throw
+  }
+} catch {
+  Add-Type -AssemblyName PresentationFramework
+  [System.Windows.MessageBox]::Show("Update fehlgeschlagen: $($_.Exception.Message)", 'Queue Pop Notifier') | Out-Null
+}
+""",
+                encoding="utf-8-sig",
+            )
+            self.after(0, lambda: self._launch_updater(updater_script, downloaded_exe))
+        except Exception as exc:
+            self.after(0, lambda error=str(exc): self._update_install_failed(error))
+
+    def _launch_updater(self, updater_script, downloaded_exe):
+        try:
+            target_exe = Path(sys.executable).resolve()
+            creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            subprocess.Popen(
+                [
+                    "powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                    "-File", str(updater_script), "-CurrentPid", str(os.getpid()),
+                    "-Source", str(downloaded_exe), "-Target", str(target_exe),
+                ],
+                close_fds=True,
+                creationflags=creation_flags,
+            )
+            self._set_status("status", self._t("update_installing"))
+            self.after(250, self._quit_app)
+        except Exception as exc:
+            self._update_install_failed(str(exc))
+
+    def _update_install_failed(self, error):
+        self.update_in_progress = False
+        messagebox.showerror(
+            self._t("update_install_failed_title"),
+            self._t("update_install_failed_message", error=error),
+        )
 
     def _restart_tray(self):
         if self.tray_icon:
