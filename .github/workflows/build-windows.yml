@@ -50,7 +50,7 @@ jobs:
       - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
-          name: QueuePopNotifier_Client_v0.3.30_Windows
+          name: QueuePopNotifier_Client_v0.3.31_Windows
           path: dist/QueuePopNotifier.exe
           if-no-files-found: error
           retention-days: 30
@@ -66,6 +66,6 @@ jobs:
           if (git diff --cached --quiet) {
             Write-Host "Executable is unchanged."
           } else {
-            git commit -m "Build Windows client 0.3.30"
+            git commit -m "Build Windows client 0.3.31"
             git push
           }
