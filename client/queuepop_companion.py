@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.37."""
+"""Queue Pop Notifier – desktop client 0.3.38."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.37"
+APP_VERSION = "0.3.38"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -67,6 +67,8 @@ TEXTS = {
         "tray_status": "{indicator}  {status}", "tray_version": "Version {version} · Updates automatisch",
         "update_downloading": "Update {version} wird heruntergeladen …",
         "update_installing": "Update geprüft · Client wird neu gestartet",
+        "update_notice_title": "Update wird installiert",
+        "update_notice_message": "Version {version} ist bereit. Der Client wird jetzt neu gestartet.",
         "update_install_failed_title": "Update fehlgeschlagen",
         "update_install_failed_message": "Das Update konnte nicht installiert werden: {error}",
         "update_checksum_failed": "Die Prüfsumme der heruntergeladenen EXE stimmt nicht.",
@@ -123,6 +125,8 @@ TEXTS = {
         "tray_status": "{indicator}  {status}", "tray_version": "Version {version} · updates automatically",
         "update_downloading": "Downloading update {version} …",
         "update_installing": "Update verified · restarting client",
+        "update_notice_title": "Installing update",
+        "update_notice_message": "Version {version} is ready. The client will now restart.",
         "update_install_failed_title": "Update failed",
         "update_install_failed_message": "The update could not be installed: {error}",
         "update_checksum_failed": "The downloaded EXE checksum does not match.",
@@ -212,6 +216,34 @@ def set_windows_startup(enabled: bool) -> None:
                     pass
     except OSError:
         # Startup integration must never prevent the notifier from running.
+        pass
+
+
+def acquire_single_instance():
+    """Keep exactly one client process alive per Windows user session."""
+    if os.name != "nt":
+        return None
+    kernel32 = ctypes.windll.kernel32
+    kernel32.CreateMutexW.argtypes = (ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR)
+    kernel32.CreateMutexW.restype = wintypes.HANDLE
+    handle = kernel32.CreateMutexW(None, False, "Local\\QueuePopNotifier.Client")
+    if not handle:
+        return None
+    if kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        kernel32.CloseHandle(handle)
+        return False
+    return handle
+
+
+def remove_stale_backup() -> None:
+    """Remove a backup left by an interrupted older updater, when possible."""
+    if os.name != "nt" or not getattr(sys, "frozen", False):
+        return
+    backup = Path(str(Path(sys.executable).resolve()) + ".old")
+    try:
+        backup.unlink(missing_ok=True)
+    except OSError:
+        # A legacy process may still hold the file. A later start retries.
         pass
 
 
@@ -934,6 +966,15 @@ class CompanionApp(tk.Tk):
             self.tray_icon = None
 
     def _tray_status_text(self):
+        if self.update_in_progress:
+            return self._t(
+                "tray_status",
+                indicator="↻",
+                status=getattr(
+                    self, "current_status_text",
+                    self._t("update_downloading", version=self.available_version),
+                ),
+            )
         kind = getattr(self, "current_status_kind", None)
         if kind == "error":
             indicator = "!"
@@ -1002,7 +1043,19 @@ class CompanionApp(tk.Tk):
             return
         self.update_in_progress = True
         self._set_status("status", self._t("update_downloading", version=self.available_version))
+        self._notify_tray(
+            self._t("update_notice_title"),
+            self._t("update_downloading", version=self.available_version),
+        )
         threading.Thread(target=self._download_update_worker, daemon=True).start()
+
+    def _notify_tray(self, title, message):
+        if not self.tray_icon:
+            return
+        try:
+            self.tray_icon.notify(message, title)
+        except Exception:
+            pass
 
     def _download_update_worker(self):
         try:
@@ -1033,16 +1086,33 @@ class CompanionApp(tk.Tk):
                 """param([int]$CurrentPid, [string]$Source, [string]$Target)
 $ErrorActionPreference = 'Stop'
 $backup = "$Target.old"
+$mutex = New-Object System.Threading.Mutex($false, 'Local\\QueuePopNotifier.Update')
+$hasMutex = $false
 try {
-  Wait-Process -Id $CurrentPid -Timeout 30 -ErrorAction SilentlyContinue
+  $hasMutex = $mutex.WaitOne(0)
+  if (-not $hasMutex) { exit 0 }
+
+  $deadline = [DateTime]::UtcNow.AddSeconds(60)
+  while (Get-Process -Id $CurrentPid -ErrorAction SilentlyContinue) {
+    if ([DateTime]::UtcNow -ge $deadline) {
+      throw 'Der bisherige Client konnte nicht beendet werden.'
+    }
+    Start-Sleep -Milliseconds 200
+  }
+
   if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Force }
   Move-Item -LiteralPath $Target -Destination $backup -Force
   try {
     Move-Item -LiteralPath $Source -Destination $Target -Force
-    Start-Process -FilePath $Target
-    Start-Sleep -Seconds 2
-    Remove-Item -LiteralPath $backup -Force -ErrorAction SilentlyContinue
+    $newProcess = Start-Process -FilePath $Target -PassThru
+    Start-Sleep -Seconds 3
+    if ($newProcess.HasExited) { throw 'Der aktualisierte Client wurde unerwartet beendet.' }
+    Remove-Item -LiteralPath $backup -Force -ErrorAction Stop
   } catch {
+    if ($newProcess -and -not $newProcess.HasExited) {
+      Stop-Process -Id $newProcess.Id -Force -ErrorAction SilentlyContinue
+      $newProcess.WaitForExit(5000) | Out-Null
+    }
     if (Test-Path -LiteralPath $Target) { Remove-Item -LiteralPath $Target -Force }
     Move-Item -LiteralPath $backup -Destination $Target -Force
     Start-Process -FilePath $Target
@@ -1051,6 +1121,9 @@ try {
 } catch {
   Add-Type -AssemblyName PresentationFramework
   [System.Windows.MessageBox]::Show("Update fehlgeschlagen: $($_.Exception.Message)", 'Queue Pop Notifier') | Out-Null
+} finally {
+  if ($hasMutex) { $mutex.ReleaseMutex() }
+  $mutex.Dispose()
 }
 """,
                 encoding="utf-8-sig",
@@ -1073,7 +1146,11 @@ try {
                 creationflags=creation_flags,
             )
             self._set_status("status", self._t("update_installing"))
-            self.after(250, self._quit_app)
+            self._notify_tray(
+                self._t("update_notice_title"),
+                self._t("update_notice_message", version=self.available_version),
+            )
+            self.after(1200, self._quit_app)
         except Exception as exc:
             self._update_install_failed(str(exc))
 
@@ -1118,4 +1195,12 @@ try {
 
 
 if __name__ == "__main__":
-    CompanionApp().mainloop()
+    _instance_mutex = acquire_single_instance()
+    if _instance_mutex is False:
+        raise SystemExit(0)
+    remove_stale_backup()
+    try:
+        CompanionApp().mainloop()
+    finally:
+        if os.name == "nt" and _instance_mutex:
+            ctypes.windll.kernel32.CloseHandle(_instance_mutex)
