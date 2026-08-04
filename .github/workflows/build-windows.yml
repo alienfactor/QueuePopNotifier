@@ -38,7 +38,7 @@ jobs:
           $encoded = Get-Content client/queuepop_notifier.ico.b64 -Raw
           [IO.File]::WriteAllBytes("client/queuepop_notifier.ico", [Convert]::FromBase64String($encoded.Trim()))
 
-      - name: Build executable
+      - name: Build executable and checksum
         shell: pwsh
         run: |
           pyinstaller --noconfirm --clean --onefile --windowed `
@@ -46,12 +46,16 @@ jobs:
             --icon client/queuepop_notifier.ico `
             --add-data "client/queuepop_notifier.ico;." `
             client/queuepop_companion.py
+          $hash = (Get-FileHash dist/QueuePopNotifier.exe -Algorithm SHA256).Hash.ToLower()
+          "$hash  QueuePopNotifier.exe" | Set-Content dist/QueuePopNotifier.exe.sha256 -Encoding ascii
 
-      - name: Upload executable
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: QueuePopNotifier_Client_v0.3.31_Windows
-          path: dist/QueuePopNotifier.exe
+          name: QueuePopNotifier_Client_v0.3.34_Windows
+          path: |
+            dist/QueuePopNotifier.exe
+            dist/QueuePopNotifier.exe.sha256
           if-no-files-found: error
           retention-days: 30
 
@@ -60,13 +64,14 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force builds/windows | Out-Null
           Copy-Item dist/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe -Force
+          Copy-Item dist/QueuePopNotifier.exe.sha256 builds/windows/QueuePopNotifier.exe.sha256 -Force
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add builds/windows/QueuePopNotifier.exe
+          git add builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
           if (git diff --cached --quiet) {
-            Write-Host "Executable is unchanged."
+            Write-Host "Build output is unchanged."
           } else {
-            git commit -m "Build Windows client 0.3.31"
+            git commit -m "Build Windows client 0.3.34"
             git push
           }
 
@@ -75,17 +80,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.3.31"
-          $title = "Queue Pop Notifier 0.3.31"
+          $tag = "v0.3.34"
+          $title = "Queue Pop Notifier 0.3.34"
           $notes = @"
           ## Changes
 
-          - Improved the update-check confirmation message.
-          - The client now reports that the latest version is already installed.
+          - Added an optional per-user Windows startup setting.
+          - Updates continue to install automatically and quietly at application startup.
+          - Added SHA-256 verification for automatic update downloads.
           "@
           gh release view $tag *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload $tag dist/QueuePopNotifier.exe --clobber
+            gh release upload $tag dist/QueuePopNotifier.exe dist/QueuePopNotifier.exe.sha256 --clobber
           } else {
-            gh release create $tag dist/QueuePopNotifier.exe --title $title --notes $notes --target "${{ github.sha }}"
+            gh release create $tag dist/QueuePopNotifier.exe dist/QueuePopNotifier.exe.sha256 --title $title --notes $notes --target "${{ github.sha }}"
           }
