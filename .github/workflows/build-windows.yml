@@ -21,6 +21,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Restore application icon
+        shell: pwsh
+        run: |
+          $encoded = Get-Content client/queuepop_notifier.ico.b64 -Raw
+          [IO.File]::WriteAllBytes("client/queuepop_notifier.ico", [Convert]::FromBase64String($encoded.Trim()))
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
