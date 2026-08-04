@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.46."""
+"""Queue Pop Notifier – desktop client 0.3.47."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.46"
+APP_VERSION = "0.3.47"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"

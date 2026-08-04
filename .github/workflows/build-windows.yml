@@ -40,6 +40,11 @@ jobs:
             --name QueuePopNotifier `
             --icon client/queuepop_notifier.ico `
             --add-data "client/queuepop_notifier.ico;." `
+            --exclude-module PIL._avif `
+            --exclude-module PIL._webp `
+            --exclude-module PIL._imagingcms `
+            --exclude-module PIL._imagingmath `
+            --exclude-module PIL._imagingtk `
             client/queuepop_companion.py
 
       - name: Create SHA-256 checksum
@@ -51,7 +56,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QueuePopNotifier_Client_v0.3.46_Windows
+          name: QueuePopNotifier_Client_v0.3.47_Windows
           path: |
             dist/QueuePopNotifier.exe
             dist/QueuePopNotifier.exe.sha256
@@ -70,7 +75,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
           if (-not (git diff --cached --quiet)) {
-            git commit -m "Build Windows client 0.3.46"
+            git commit -m "Build Windows client 0.3.47"
             git push
           }
 
@@ -79,9 +84,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.3.46"
-          $title = "Queue Pop Notifier 0.3.46"
-          $notes = "Adds an automatic-update note to the Settings version line and removes unreliable success notifications. Successful updates now run silently; genuine update failures remain visible."
+          $tag = "v0.3.47"
+          $title = "Queue Pop Notifier 0.3.47"
+          $notes = "Final client release. Removes unused Pillow image decoders from the Windows package to reduce its size without changing functionality."
           gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag dist/QueuePopNotifier.exe dist/QueuePopNotifier.exe.sha256 --clobber
