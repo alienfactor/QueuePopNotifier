@@ -9,7 +9,7 @@ on:
       - ".github/workflows/build-windows.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -54,3 +54,18 @@ jobs:
           path: dist/QueuePopNotifier.exe
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish executable in repository
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force builds/windows | Out-Null
+          Copy-Item dist/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe -Force
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add builds/windows/QueuePopNotifier.exe
+          if (git diff --cached --quiet) {
+            Write-Host "Executable is unchanged."
+          } else {
+            git commit -m "Build Windows client 0.3.30"
+            git push
+          }
