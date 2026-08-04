@@ -69,3 +69,23 @@ jobs:
             git commit -m "Build Windows client 0.3.31"
             git push
           }
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "v0.3.31"
+          $title = "Queue Pop Notifier 0.3.31"
+          $notes = @"
+          ## Changes
+
+          - Improved the update-check confirmation message.
+          - The client now reports that the latest version is already installed.
+          "@
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $tag dist/QueuePopNotifier.exe --clobber
+          } else {
+            gh release create $tag dist/QueuePopNotifier.exe --title $title --notes $notes --target "${{ github.sha }}"
+          }
