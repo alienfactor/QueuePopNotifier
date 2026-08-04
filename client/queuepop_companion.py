@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.38."""
+"""Queue Pop Notifier – desktop client 0.3.39."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.38"
+APP_VERSION = "0.3.39"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -68,7 +68,7 @@ TEXTS = {
         "update_downloading": "Update {version} wird heruntergeladen …",
         "update_installing": "Update geprüft · Client wird neu gestartet",
         "update_notice_title": "Update wird installiert",
-        "update_notice_message": "Version {version} ist bereit. Der Client wird jetzt neu gestartet.",
+        "update_notice_message": "Version {version} wurde heruntergeladen und wird jetzt installiert. Der Client startet anschließend neu.",
         "update_install_failed_title": "Update fehlgeschlagen",
         "update_install_failed_message": "Das Update konnte nicht installiert werden: {error}",
         "update_checksum_failed": "Die Prüfsumme der heruntergeladenen EXE stimmt nicht.",
@@ -126,7 +126,7 @@ TEXTS = {
         "update_downloading": "Downloading update {version} …",
         "update_installing": "Update verified · restarting client",
         "update_notice_title": "Installing update",
-        "update_notice_message": "Version {version} is ready. The client will now restart.",
+        "update_notice_message": "Version {version} has been downloaded and will now be installed. The client will then restart.",
         "update_install_failed_title": "Update failed",
         "update_install_failed_message": "The update could not be installed: {error}",
         "update_checksum_failed": "The downloaded EXE checksum does not match.",
@@ -1136,6 +1136,7 @@ try {
         try:
             target_exe = Path(sys.executable).resolve()
             creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+            self._show_update_notice()
             subprocess.Popen(
                 [
                     "powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
@@ -1150,9 +1151,32 @@ try {
                 self._t("update_notice_title"),
                 self._t("update_notice_message", version=self.available_version),
             )
-            self.after(1200, self._quit_app)
+            self._terminate_for_update()
         except Exception as exc:
             self._update_install_failed(str(exc))
+
+    def _show_update_notice(self):
+        """Show a foreground notice that cannot disappear with a hidden tray window."""
+        title = self._t("update_notice_title")
+        message = self._t("update_notice_message", version=self.available_version)
+        if os.name == "nt":
+            # MB_OK | MB_ICONINFORMATION | MB_SYSTEMMODAL | MB_SETFOREGROUND
+            ctypes.windll.user32.MessageBoxW(None, message, title, 0x00000040 | 0x00001000 | 0x00010000)
+        else:
+            messagebox.showinfo(title, message)
+
+    def _terminate_for_update(self):
+        """Guarantee that no Python or tray thread keeps the old executable alive."""
+        self.stop_event.set()
+        if self.tray_icon:
+            try:
+                self.tray_icon.stop()
+            except Exception:
+                pass
+        try:
+            self.destroy()
+        finally:
+            os._exit(0)
 
     def _update_install_failed(self, error):
         self.update_in_progress = False
