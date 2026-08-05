@@ -43,7 +43,17 @@ You can step away from your computer without constantly watching the screen.
 
 The desktop client runs in the Windows system tray and remains unobtrusive during normal use. After the initial Pushover setup, no further interaction is normally required.
 
-The Windows executable is built reproducibly using GitHub Actions.
+## Optional queue-pop sound
+
+Want the familiar queue-pop sound on your phone?
+[Download the Queue Pop sound](queue_popup.mp3), upload it as a custom sound in your Pushover dashboard, and select it for Queue Pop Notifier notifications.
+
+1. Open the Pushover dashboard.
+2. Upload the included `queue_popup.mp3` as a custom sound.
+3. Return to the Queue Pop Notifier settings and refresh the sound list.
+4. Select the uploaded sound under **Notifications → Sound**.
+
+Your phone will now play the familiar queue-pop alert whenever a queue is ready.
 
 ## Privacy and Local Storage
 
