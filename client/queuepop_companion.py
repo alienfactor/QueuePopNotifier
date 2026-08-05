@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.51."""
+"""Queue Pop Notifier – desktop client 0.3.52."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.51"
+APP_VERSION = "0.3.52"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -63,6 +63,8 @@ TEXTS = {
         "priority_high_help": "Hoch: Auffälligere Zustellung ohne Bestätigung – für iOS empfohlen.",
         "general": "Allgemein",
         "start_with_windows": "Mit Windows starten",
+        "language_help": "Legt die Sprache der Benutzeroberfläche fest.",
+        "start_with_windows_help": "Startet Queue Pop Notifier automatisch nach der Windows-Anmeldung.",
         "test_pushover": "Testnachricht senden", "save": "Speichern", "saved": "Gespeichert ✓",
         "tray_settings": "Einstellungen …", "tray_report_issue": "Problem melden",
         "open_config_folder": "Konfigurationsordner öffnen",
@@ -121,6 +123,8 @@ TEXTS = {
         "priority_high_help": "High: More prominent delivery without confirmation – recommended for iOS.",
         "general": "General",
         "start_with_windows": "Start with Windows",
+        "language_help": "Sets the language of the user interface.",
+        "start_with_windows_help": "Starts Queue Pop Notifier automatically after signing in to Windows.",
         "test_pushover": "Send test notification", "save": "Save", "saved": "Saved ✓",
         "tray_settings": "Settings …", "tray_report_issue": "Report an issue",
         "open_config_folder": "Open configuration folder",
@@ -561,8 +565,10 @@ class CompanionApp(tk.Tk):
         self.notifications_intro_label.configure(text=self._t("notifications_intro"))
         self.general_label.configure(text=self._t("general"))
         self.language_label.configure(text=self._t("language"))
+        self.language_help_label.configure(text=self._t("language_help"))
         self.priority_label.configure(text=self._t("priority"))
-        self.start_with_windows_check.configure(text=self._t("start_with_windows"))
+        self.start_with_windows_label.configure(text=self._t("start_with_windows"))
+        self.start_with_windows_help_label.configure(text=self._t("start_with_windows_help"))
         self.test_button.configure(text=self._t("test_pushover"))
         self.save_button.configure(text=self._t("save"))
         self.config_folder_link.configure(text=self._t("open_config_folder"))
@@ -719,25 +725,49 @@ class CompanionApp(tk.Tk):
         general_card = card_frame()
         self.general_label = tk.Label(general_card, text=self._t("general"), bg=card, fg=fg,
                                       font=("Segoe UI", 11, "bold"))
-        self.general_label.grid(row=0, column=0, columnspan=2, sticky="w")
+        self.general_label.pack(anchor="w")
         self.start_with_windows_var = tk.BooleanVar(
             value=bool(self.config_data.get("start_with_windows", False))
         )
+        language_row = tk.Frame(general_card, bg=card)
+        language_row.pack(fill="x", pady=(13, 12))
+        language_row.columnconfigure(0, weight=1)
+        self.language_label = tk.Label(language_row, text=self._t("language"), bg=card, fg=fg,
+                                       font=("Segoe UI", 9, "bold"), anchor="w")
+        self.language_label.grid(row=0, column=0, sticky="ew")
+        self.language_help_label = tk.Label(
+            language_row, text=self._t("language_help"), bg=card, fg=muted,
+            justify="left", anchor="w", width=1, font=("Segoe UI", 8),
+        )
+        self.language_help_label.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(3, 0))
+        self.language_combo = ttk.Combobox(language_row, textvariable=self.language_var,
+                                           state="readonly", width=22, style="Dark.TCombobox")
+        self.language_combo.grid(row=0, column=1, sticky="e", padx=(24, 0))
+        self._set_language_combo()
+        self.language_combo.bind("<<ComboboxSelected>>", self._language_selected)
+        separator = tk.Frame(general_card, bg="#d7d7d7", height=1)
+        separator.pack(fill="x")
+        autostart_row = tk.Frame(general_card, bg=card)
+        autostart_row.pack(fill="x", pady=(12, 0))
+        autostart_row.columnconfigure(0, weight=1)
         self.start_with_windows_check = ttk.Checkbutton(
-            general_card,
-            text=self._t("start_with_windows"),
+            autostart_row,
             variable=self.start_with_windows_var,
             style="Dark.TCheckbutton",
         )
-        self.language_label = tk.Label(general_card, text=self._t("language"), bg=card, fg=fg,
-                                       font=("Segoe UI", 9, "bold"))
-        self.language_label.grid(row=1, column=0, sticky="w", pady=(6, 0))
-        self.language_combo = ttk.Combobox(general_card, textvariable=self.language_var,
-                                           state="readonly", width=22, style="Dark.TCombobox")
-        self.language_combo.grid(row=2, column=0, sticky="w", pady=(3, 0))
-        self._set_language_combo()
-        self.language_combo.bind("<<ComboboxSelected>>", self._language_selected)
-        self.start_with_windows_check.grid(row=3, column=0, sticky="w", pady=(9, 0))
+        self.start_with_windows_label = tk.Label(
+            autostart_row, text=self._t("start_with_windows"), bg=card, fg=fg,
+            font=("Segoe UI", 9, "bold"), anchor="w",
+        )
+        self.start_with_windows_label.grid(row=0, column=0, sticky="ew")
+        self.start_with_windows_help_label = tk.Label(
+            autostart_row, text=self._t("start_with_windows_help"), bg=card, fg=muted,
+            justify="left", anchor="w", width=1, font=("Segoe UI", 8),
+        )
+        self.start_with_windows_help_label.grid(
+            row=1, column=0, columnspan=2, sticky="ew", pady=(3, 0)
+        )
+        self.start_with_windows_check.grid(row=0, column=1, sticky="e", padx=(24, 4))
 
         actions = tk.Frame(root, bg=bg)
         actions.pack(fill="x", pady=(2, 0))
