@@ -28,7 +28,7 @@ The WoW add-on detects the queue pop and passes the event to the lightweight Win
 3. The desktop client receives the event.
 4. Pushover sends an alert to your smartphone.
 
-![How Queue Pop Notifier works](client_flow.png)
+![How Queue Pop Notifier works](client_howto.png)
 
 You can step away from your computer without constantly watching the screen.
 
