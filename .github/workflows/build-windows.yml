@@ -56,7 +56,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QueuePopNotifier_Client_v0.3.52_Windows
+          name: QueuePopNotifier_Client_v0.3.53_Windows
           path: |
             dist/QueuePopNotifier.exe
             dist/QueuePopNotifier.exe.sha256
@@ -75,7 +75,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
           if (-not (git diff --cached --quiet)) {
-            git commit -m "Build Windows client 0.3.52"
+            git commit -m "Build Windows client 0.3.53"
             git push
           }
 
@@ -84,8 +84,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.3.52"
-          $title = "Queue Pop Notifier 0.3.52"
+          $tag = "v0.3.53"
+          $title = "Queue Pop Notifier 0.3.53"
           $notes = @'
           Queue Pop Notifier sends an instant notification to your phone when a PvE or PvP queue becomes ready in World of Warcraft: Mists of Pandaria Classic—so you can step away from your PC without missing the invite.
 
@@ -98,12 +98,11 @@ jobs:
           - German and English interface
           - Compact tray application with no intrusive update popups
 
-          ## Changes in 0.3.52
+          ## Changes in 0.3.53
 
-          - Redesigned the **General** section to use the available width more effectively.
-          - Added clear descriptions for the language and Windows startup settings.
-          - Aligned setting titles and descriptions consistently on the left.
-          - Kept the language selector and startup control neatly aligned on the right.
+          - Replaced the native Windows startup checkbox with a compact toggle switch.
+          - Matched the active toggle color to the blue **Save** button.
+          - Made the entire Windows startup row clickable and added keyboard control.
 
           ## Installation
 

@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.52."""
+"""Queue Pop Notifier – desktop client 0.3.53."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.52"
+APP_VERSION = "0.3.53"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -630,8 +630,6 @@ class CompanionApp(tk.Tk):
                   foreground=[("readonly", fg)],
                   selectbackground=[("readonly", "#ffffff")],
                   selectforeground=[("readonly", fg)])
-        style.configure("Dark.TCheckbutton", background=card, foreground=fg, font=("Segoe UI", 9))
-        style.map("Dark.TCheckbutton", background=[("active", card)], foreground=[("active", fg)])
         style.configure("Secondary.TButton", background="#e2e2e2", foreground=fg,
                         bordercolor="#bdbdbd", padding=(12, 7), font=("Segoe UI", 9))
         style.map("Secondary.TButton", background=[("active", "#d5d5d5")])
@@ -750,10 +748,9 @@ class CompanionApp(tk.Tk):
         autostart_row = tk.Frame(general_card, bg=card)
         autostart_row.pack(fill="x", pady=(12, 0))
         autostart_row.columnconfigure(0, weight=1)
-        self.start_with_windows_check = ttk.Checkbutton(
-            autostart_row,
-            variable=self.start_with_windows_var,
-            style="Dark.TCheckbutton",
+        self.start_with_windows_toggle = tk.Canvas(
+            autostart_row, width=38, height=20, bg=card, highlightthickness=0,
+            bd=0, cursor="hand2", takefocus=True,
         )
         self.start_with_windows_label = tk.Label(
             autostart_row, text=self._t("start_with_windows"), bg=card, fg=fg,
@@ -767,7 +764,18 @@ class CompanionApp(tk.Tk):
         self.start_with_windows_help_label.grid(
             row=1, column=0, columnspan=2, sticky="ew", pady=(3, 0)
         )
-        self.start_with_windows_check.grid(row=0, column=1, sticky="e", padx=(24, 4))
+        self.start_with_windows_toggle.grid(row=0, column=1, sticky="e", padx=(24, 3))
+        self.start_with_windows_var.trace_add("write", self._draw_autostart_toggle)
+        self._draw_autostart_toggle()
+        for widget in (
+            autostart_row,
+            self.start_with_windows_label,
+            self.start_with_windows_help_label,
+            self.start_with_windows_toggle,
+        ):
+            widget.bind("<Button-1>", self._toggle_autostart)
+        self.start_with_windows_toggle.bind("<space>", self._toggle_autostart)
+        self.start_with_windows_toggle.bind("<Return>", self._toggle_autostart)
 
         actions = tk.Frame(root, bg=bg)
         actions.pack(fill="x", pady=(2, 0))
@@ -795,6 +803,28 @@ class CompanionApp(tk.Tk):
     def _update_priority_help(self):
         key = "priority_normal_help" if self.priority_var.get() == self._t("priority_normal") else "priority_high_help"
         self.priority_help_label.configure(text=self._t(key))
+
+    def _draw_autostart_toggle(self, *_args):
+        """Draw the autostart switch consistently, independent of the Tk theme."""
+        canvas = self.start_with_windows_toggle
+        canvas.delete("all")
+        enabled = bool(self.start_with_windows_var.get())
+        track = "#3977bd" if enabled else "#aeb3b8"
+        outline = "#2f639e" if enabled else "#979da3"
+        # A rectangle between two circles forms a crisp rounded 38 x 20 track.
+        canvas.create_oval(1, 1, 19, 19, fill=track, outline=outline)
+        canvas.create_oval(19, 1, 37, 19, fill=track, outline=outline)
+        canvas.create_rectangle(10, 1, 28, 19, fill=track, outline=track)
+        knob_x = 27 if enabled else 11
+        canvas.create_oval(
+            knob_x - 7, 3, knob_x + 7, 17,
+            fill="#ffffff", outline="#e7e7e7",
+        )
+
+    def _toggle_autostart(self, _event=None):
+        """Toggle autostart from the switch or anywhere in its settings row."""
+        self.start_with_windows_var.set(not self.start_with_windows_var.get())
+        return "break"
 
     def _set_pushover_state(self, state):
         self.pushover_validation_state = state
