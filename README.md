@@ -21,7 +21,6 @@ The WoW add-on detects the queue pop and passes the event to the lightweight Win
 * Built-in test notification
 * Simple one-time Pushover setup
 * Local storage of credentials and settings
-* Reproducible Windows builds through GitHub Actions
 
 ## How It Works
 
