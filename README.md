@@ -45,15 +45,15 @@ The desktop client runs in the Windows system tray and remains unobtrusive durin
 
 ## Optional queue-pop sound
 
-Want the familiar queue-pop sound on your phone?
-[Download the Queue Pop sound](queue_popup.mp3), upload it as a custom sound in your Pushover dashboard, and select it for Queue Pop Notifier notifications.
+You can use the original queue-pop sound for notifications on your phone.
 
-1. Open the Pushover dashboard.
-2. Upload the included `queue_popup.mp3` as a custom sound.
-3. Return to the Queue Pop Notifier settings and refresh the sound list.
-4. Select the uploaded sound under **Notifications → Sound**.
+1. [Download the Queue Pop sound](queue_popup.mp3).
+2. Open your [Pushover dashboard](https://pushover.net/sounds/build).
+3. Under **Your Custom Sounds**, click **Upload a Sound**.
+4. Select the downloaded sound file and give it a short name, such as **Queue**.
+5. After uploading, select **Queue** as the notification sound in your Pushover app.
 
-Your phone will now play the familiar queue-pop alert whenever a queue is ready.
+Your phone will now play the queue-pop sound whenever a queue is ready.
 
 ## Privacy and Local Storage
 
