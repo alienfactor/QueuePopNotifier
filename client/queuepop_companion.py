@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.47."""
+"""Queue Pop Notifier – desktop client 0.3.48."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.47"
+APP_VERSION = "0.3.48"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -65,7 +65,9 @@ TEXTS = {
         "start_with_windows": "Mit Windows starten",
         "test_pushover": "Testnachricht senden", "save": "Speichern", "saved": "Gespeichert ✓",
         "tray_settings": "Einstellungen …", "tray_report_issue": "Problem melden",
-        "tray_status": "{status}", "version": "Version {version} · Updates werden automatisch installiert",
+        "open_config_folder": "Konfigurationsordner öffnen",
+        "tray_status": "{status}",
+        "version": "Version {version} · Updates werden automatisch installiert",
         "update_downloading": "Update wird heruntergeladen",
         "update_installing": "Update wird installiert",
         "update_install_failed_title": "Update fehlgeschlagen",
@@ -121,7 +123,9 @@ TEXTS = {
         "start_with_windows": "Start with Windows",
         "test_pushover": "Send test notification", "save": "Save", "saved": "Saved ✓",
         "tray_settings": "Settings …", "tray_report_issue": "Report an issue",
-        "tray_status": "{status}", "version": "Version {version} · Updates are installed automatically",
+        "open_config_folder": "Open configuration folder",
+        "tray_status": "{status}",
+        "version": "Version {version} · Updates are installed automatically",
         "update_downloading": "Downloading update",
         "update_installing": "Installing update",
         "update_install_failed_title": "Update failed",
@@ -180,7 +184,9 @@ gdi32 = ctypes.windll.gdi32 if os.name == "nt" else None
 def load_config() -> dict:
     data = dict(DEFAULTS)
     try:
-        data.update(json.loads(CONFIG_PATH.read_text(encoding="utf-8")))
+        saved = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        if isinstance(saved, dict):
+            data.update({key: saved[key] for key in DEFAULTS if key in saved})
     except (OSError, ValueError):
         pass
     if data.get("pushover_priority") not in (0, 1):
@@ -190,7 +196,8 @@ def load_config() -> dict:
 
 def save_config(data: dict) -> None:
     APP_DIR.mkdir(parents=True, exist_ok=True)
-    CONFIG_PATH.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    active_config = {key: data.get(key, default) for key, default in DEFAULTS.items()}
+    CONFIG_PATH.write_text(json.dumps(active_config, indent=2), encoding="utf-8")
 
 
 def set_windows_startup(enabled: bool) -> None:
@@ -532,6 +539,8 @@ class CompanionApp(tk.Tk):
         self.start_with_windows_check.configure(text=self._t("start_with_windows"))
         self.test_button.configure(text=self._t("test_pushover"))
         self.save_button.configure(text=self._t("save"))
+        self.config_folder_link.configure(text=self._t("open_config_folder"))
+        self.version_label.configure(text=self._t("version", version=APP_VERSION))
         self._update_eye_button("user")
         self._update_eye_button("token")
         configured = bool(self.config_data["pushover_user_key"] and self.config_data["pushover_app_token"])
@@ -705,10 +714,19 @@ class CompanionApp(tk.Tk):
         self.test_button.pack(side="left", padx=(0, 8))
         self.save_button = ttk.Button(actions, text=self._t("save"), style="Primary.TButton", command=self._save)
         self.save_button.pack(side="right")
-        self.version_label = tk.Label(root, text=self._t("version", version=APP_VERSION), bg=bg, fg=muted,
-                                      font=("Segoe UI", 8))
-        self.version_label.pack(fill="x", anchor="e", pady=(8, 0))
-        self.version_label.configure(anchor="e")
+        footer = tk.Frame(root, bg=bg)
+        footer.pack(fill="x", pady=(8, 0))
+        self.config_folder_link = tk.Label(
+            footer, text=self._t("open_config_folder"), bg=bg, fg="#70a7d8",
+            cursor="hand2", font=("Segoe UI", 8, "underline"),
+        )
+        self.config_folder_link.pack(side="left")
+        self.config_folder_link.bind("<Button-1>", self._open_config_folder)
+        self.version_label = tk.Label(
+            footer, text=self._t("version", version=APP_VERSION), bg=bg, fg=muted,
+            font=("Segoe UI", 8), anchor="e",
+        )
+        self.version_label.pack(side="right")
         self.user_var.trace_add("write", self._credentials_changed)
         self.token_var.trace_add("write", self._credentials_changed)
 
@@ -756,6 +774,17 @@ class CompanionApp(tk.Tk):
         wanted_height = self.winfo_reqheight()
         self.minsize(570, wanted_height)
         self.geometry(f"570x{wanted_height}")
+
+    def _open_config_folder(self, _event=None):
+        """Open the configuration directory and select config.json when it exists."""
+        APP_DIR.mkdir(parents=True, exist_ok=True)
+        if os.name == "nt":
+            if CONFIG_PATH.exists():
+                subprocess.Popen(["explorer.exe", "/select,", str(CONFIG_PATH)])
+            else:
+                os.startfile(APP_DIR)
+        else:
+            webbrowser.open(APP_DIR.as_uri())
 
     def _current_config(self):
         self.config_data["pushover_user_key"] = self.user_var.get().strip()

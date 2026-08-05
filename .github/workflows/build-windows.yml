@@ -56,7 +56,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QueuePopNotifier_Client_v0.3.47_Windows
+          name: QueuePopNotifier_Client_v0.3.48_Windows
           path: |
             dist/QueuePopNotifier.exe
             dist/QueuePopNotifier.exe.sha256
@@ -75,7 +75,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
           if (-not (git diff --cached --quiet)) {
-            git commit -m "Build Windows client 0.3.47"
+            git commit -m "Build Windows client 0.3.48"
             git push
           }
 
@@ -84,9 +84,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.3.47"
-          $title = "Queue Pop Notifier 0.3.47"
-          $notes = "Final client release. Removes unused Pillow image decoders from the Windows package to reduce its size without changing functionality."
+          $tag = "v0.3.48"
+          $title = "Queue Pop Notifier 0.3.48"
+          $notes = @'
+          ## Changes
+
+          - Removes obsolete entries from `config.json` automatically when the configuration is saved.
+          - Adds **Open configuration folder** to the Settings footer.
+          - Opens the Queue Pop Notifier folder and selects `config.json` for quick access.
+          - Retains the reduced Windows executable size introduced in 0.3.47.
+          '@
           gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
             gh release upload $tag dist/QueuePopNotifier.exe dist/QueuePopNotifier.exe.sha256 --clobber
