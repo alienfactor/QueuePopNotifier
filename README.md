@@ -1,6 +1,7 @@
 # Queue Pop Notifier
 
 > **Never miss a World of Warcraft queue pop again.**
+
 ![Services](services.png)
  
 Queue Pop Notifier sends an instant notification to your smartphone when your World of Warcraft queue is ready — even if you are away from your computer.
