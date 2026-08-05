@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.50."""
+"""Queue Pop Notifier – desktop client 0.3.51."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.50"
+APP_VERSION = "0.3.51"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -524,13 +524,31 @@ class CompanionApp(tk.Tk):
         index = self.language_combo.current()
         if index >= 0:
             self.selected_language_code = ("auto", "de", "en")[index]
+        self.after_idle(lambda: self._clear_combo_selection(self.language_combo))
+
+    @staticmethod
+    def _clear_combo_selection(combo):
+        """Keep a readonly combobox legible after Tk selects its displayed text."""
+        try:
+            combo.selection_clear()
+        except tk.TclError:
+            pass
 
     def _set_priority_combo(self):
         values = [self._t("priority_normal"), self._t("priority_high")]
         self.priority_combo.configure(values=values)
         priority = int(self.config_data.get("pushover_priority", 1))
         index = 0 if priority == 0 else 1
+        self.selected_priority = index
         self.priority_var.set(values[index])
+
+    def _priority_selected(self, _event=None):
+        """Keep priority independent from the translated combobox text."""
+        index = self.priority_combo.current()
+        if index >= 0:
+            self.selected_priority = index
+        self._update_priority_help()
+        self.after_idle(lambda: self._clear_combo_selection(self.priority_combo))
 
     def _refresh_language(self):
         """Apply the selected language to every persistent UI element."""
@@ -600,9 +618,12 @@ class CompanionApp(tk.Tk):
                         padding=(9, 7))
         style.configure("Dark.TCombobox", fieldbackground="#ffffff", background="#dddddd",
                         foreground=fg, arrowcolor=fg, bordercolor=border, lightcolor=border,
-                        darkcolor=border, padding=(8, 6))
+                        darkcolor=border, selectbackground="#ffffff", selectforeground=fg,
+                        padding=(8, 6))
         style.map("Dark.TCombobox", fieldbackground=[("readonly", "#ffffff")],
-                  foreground=[("readonly", fg)], selectbackground=[("readonly", "#ffffff")])
+                  foreground=[("readonly", fg)],
+                  selectbackground=[("readonly", "#ffffff")],
+                  selectforeground=[("readonly", fg)])
         style.configure("Dark.TCheckbutton", background=card, foreground=fg, font=("Segoe UI", 9))
         style.map("Dark.TCheckbutton", background=[("active", card)], foreground=[("active", fg)])
         style.configure("Secondary.TButton", background="#e2e2e2", foreground=fg,
@@ -687,11 +708,12 @@ class CompanionApp(tk.Tk):
         self.language_var = tk.StringVar()
         self.selected_language_code = self.config_data.get("language", "auto")
         self.priority_var = tk.StringVar()
+        self.selected_priority = 0 if self.config_data.get("pushover_priority") == 0 else 1
         self.priority_combo = ttk.Combobox(notification_card, textvariable=self.priority_var,
                                            state="readonly", width=18, style="Dark.TCombobox")
         self.priority_combo.grid(row=3, column=0, sticky="w", pady=(5, 0))
         self._set_priority_combo()
-        self.priority_combo.bind("<<ComboboxSelected>>", lambda _event: self._update_priority_help())
+        self.priority_combo.bind("<<ComboboxSelected>>", self._priority_selected)
         self._update_priority_help()
 
         general_card = card_frame()
@@ -707,7 +729,6 @@ class CompanionApp(tk.Tk):
             variable=self.start_with_windows_var,
             style="Dark.TCheckbutton",
         )
-        self.start_with_windows_check.grid(row=2, column=1, sticky="e", padx=(30, 0), pady=(3, 0))
         self.language_label = tk.Label(general_card, text=self._t("language"), bg=card, fg=fg,
                                        font=("Segoe UI", 9, "bold"))
         self.language_label.grid(row=1, column=0, sticky="w", pady=(6, 0))
@@ -716,7 +737,7 @@ class CompanionApp(tk.Tk):
         self.language_combo.grid(row=2, column=0, sticky="w", pady=(3, 0))
         self._set_language_combo()
         self.language_combo.bind("<<ComboboxSelected>>", self._language_selected)
-        general_card.columnconfigure(0, weight=1)
+        self.start_with_windows_check.grid(row=3, column=0, sticky="w", pady=(9, 0))
 
         actions = tk.Frame(root, bg=bg)
         actions.pack(fill="x", pady=(2, 0))
@@ -802,10 +823,7 @@ class CompanionApp(tk.Tk):
         self.config_data["pushover_app_token"] = self.token_var.get().strip()
         self._language_selected()
         self.config_data["language"] = self.selected_language_code
-        priority_values = {
-            self._t("priority_normal"): 0, self._t("priority_high"): 1,
-        }
-        self.config_data["pushover_priority"] = priority_values.get(self.priority_var.get(), 1)
+        self.config_data["pushover_priority"] = self.selected_priority
         self.config_data["start_with_windows"] = bool(self.start_with_windows_var.get())
         return self.config_data
 

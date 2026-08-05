@@ -56,7 +56,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QueuePopNotifier_Client_v0.3.50_Windows
+          name: QueuePopNotifier_Client_v0.3.51_Windows
           path: |
             dist/QueuePopNotifier.exe
             dist/QueuePopNotifier.exe.sha256
@@ -75,7 +75,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
           if (-not (git diff --cached --quiet)) {
-            git commit -m "Build Windows client 0.3.50"
+            git commit -m "Build Windows client 0.3.51"
             git push
           }
 
@@ -84,14 +84,40 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.3.50"
-          $title = "Queue Pop Notifier 0.3.50"
+          $tag = "v0.3.51"
+          $title = "Queue Pop Notifier 0.3.51"
           $notes = @'
-          ## Changes
+          Queue Pop Notifier sends an instant notification to your phone when a PvE or PvP queue becomes ready in World of Warcraft: Mists of Pandaria Classic—so you can step away from your PC without missing the invite.
 
-          - Keeps the selected language visible after changing, saving, and reopening the settings.
-          - Places the **Language** selection on the left and **Start with Windows** on the right.
-          - Reduces the spacing below the **General** section heading.
+          ## Highlights
+
+          - Instant notifications for PvE and PvP queue pops
+          - Alerts when a failed proposal places you back into the queue
+          - Fast detection, typically within less than one second
+          - Automatic client updates
+          - German and English interface
+          - Compact tray application with no intrusive update popups
+
+          ## Changes in 0.3.51
+
+          - Fixed dropdown text appearing empty after selecting an option.
+          - Corrected the issue for both **Language** and **Notification Priority**.
+          - Improved dropdown selection and focus colors.
+          - Moved **Start with Windows** directly below the language selection.
+
+          ## Installation
+
+          1. Download `QueuePopNotifier.exe` below.
+          2. Start the client and enter your Pushover User Key and App/API Token.
+          3. Keep the WoW addon enabled while playing.
+
+          Existing installations receive this version automatically.
+
+          ## Requirements
+
+          - Windows 10 or Windows 11
+          - Queue Pop Notifier WoW addon
+          - Pushover account
           '@
           gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
