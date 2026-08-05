@@ -1,4 +1,4 @@
-"""Queue Pop Notifier – desktop client 0.3.48."""
+"""Queue Pop Notifier – desktop client 0.3.49."""
 from __future__ import annotations
 
 import ctypes
@@ -24,7 +24,7 @@ import webbrowser
 if os.name == "nt":
     import winreg
 
-APP_VERSION = "0.3.48"
+APP_VERSION = "0.3.49"
 SIGNAL_PROTOCOL = 2
 GITHUB_REPOSITORY = "alienfactor/QueuePopNotifier"
 APP_DIR = Path(os.environ.get("APPDATA", Path.home())) / "QueuePopNotifier"
@@ -516,7 +516,7 @@ class CompanionApp(tk.Tk):
         self.language_combo.configure(values=values)
         configured = self.config_data.get("language", "auto")
         index = {"auto": 0, "de": 1, "en": 2}.get(configured, 0)
-        self.language_var.set(values[index])
+        self.language_combo.current(index)
 
     def _set_priority_combo(self):
         values = [self._t("priority_normal"), self._t("priority_high")]
@@ -532,6 +532,7 @@ class CompanionApp(tk.Tk):
         self.user_help_label.configure(text=self._t("user_key_help"))
         self.token_help_label.configure(text=self._t("app_token_help"))
         self.pushover_help_label.configure(text=self._t("pushover_help"))
+        self.notifications_label.configure(text=self._t("notifications"))
         self.notifications_intro_label.configure(text=self._t("notifications_intro"))
         self.general_label.configure(text=self._t("general"))
         self.language_label.configure(text=self._t("language"))
@@ -664,8 +665,9 @@ class CompanionApp(tk.Tk):
         self.settings_frame.columnconfigure(0, weight=1)
 
         notification_card = card_frame()
-        tk.Label(notification_card, text=self._t("notifications"), bg=card, fg=fg,
-                 font=("Segoe UI", 11, "bold")).grid(row=0, column=0, columnspan=2, sticky="w")
+        self.notifications_label = tk.Label(notification_card, text=self._t("notifications"), bg=card, fg=fg,
+                                            font=("Segoe UI", 11, "bold"))
+        self.notifications_label.grid(row=0, column=0, columnspan=2, sticky="w")
         self.notifications_intro_label = tk.Label(notification_card, text=self._t("notifications_intro"),
                                                    bg=card, fg=muted, font=("Segoe UI", 8))
         self.notifications_intro_label.grid(row=1, column=0, columnspan=2, sticky="w", pady=(2, 12))
@@ -687,7 +689,7 @@ class CompanionApp(tk.Tk):
         general_card = card_frame()
         self.general_label = tk.Label(general_card, text=self._t("general"), bg=card, fg=fg,
                                       font=("Segoe UI", 11, "bold"))
-        self.general_label.grid(row=0, column=0, sticky="w")
+        self.general_label.grid(row=0, column=0, columnspan=2, sticky="w")
         self.start_with_windows_var = tk.BooleanVar(
             value=bool(self.config_data.get("start_with_windows", False))
         )
@@ -697,13 +699,13 @@ class CompanionApp(tk.Tk):
             variable=self.start_with_windows_var,
             style="Dark.TCheckbutton",
         )
-        self.start_with_windows_check.grid(row=1, column=0, sticky="w", pady=(10, 0))
+        self.start_with_windows_check.grid(row=2, column=0, sticky="w", pady=(10, 0))
         self.language_label = tk.Label(general_card, text=self._t("language"), bg=card, fg=fg,
                                        font=("Segoe UI", 9, "bold"))
-        self.language_label.grid(row=0, column=1, sticky="w", padx=(30, 0))
+        self.language_label.grid(row=1, column=1, sticky="w", padx=(30, 0), pady=(10, 0))
         self.language_combo = ttk.Combobox(general_card, textvariable=self.language_var,
                                            state="readonly", width=22, style="Dark.TCombobox")
-        self.language_combo.grid(row=1, column=1, sticky="e", padx=(30, 0), pady=(5, 0))
+        self.language_combo.grid(row=2, column=1, sticky="e", padx=(30, 0), pady=(5, 0))
         self._set_language_combo()
         general_card.columnconfigure(0, weight=1)
 
@@ -789,11 +791,9 @@ class CompanionApp(tk.Tk):
     def _current_config(self):
         self.config_data["pushover_user_key"] = self.user_var.get().strip()
         self.config_data["pushover_app_token"] = self.token_var.get().strip()
-        selected = self.language_var.get()
-        language_values = {
-            self._t("language_auto"): "auto", self._t("language_de"): "de", self._t("language_en"): "en",
-        }
-        self.config_data["language"] = language_values.get(selected, "auto")
+        language_codes = ("auto", "de", "en")
+        selected_index = self.language_combo.current()
+        self.config_data["language"] = language_codes[selected_index] if selected_index >= 0 else "auto"
         priority_values = {
             self._t("priority_normal"): 0, self._t("priority_high"): 1,
         }

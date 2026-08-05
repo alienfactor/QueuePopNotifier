@@ -56,7 +56,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QueuePopNotifier_Client_v0.3.48_Windows
+          name: QueuePopNotifier_Client_v0.3.49_Windows
           path: |
             dist/QueuePopNotifier.exe
             dist/QueuePopNotifier.exe.sha256
@@ -75,7 +75,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
           if (-not (git diff --cached --quiet)) {
-            git commit -m "Build Windows client 0.3.48"
+            git commit -m "Build Windows client 0.3.49"
             git push
           }
 
@@ -84,15 +84,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.3.48"
-          $title = "Queue Pop Notifier 0.3.48"
+          $tag = "v0.3.49"
+          $title = "Queue Pop Notifier 0.3.49"
           $notes = @'
           ## Changes
 
-          - Removes obsolete entries from `config.json` automatically when the configuration is saved.
-          - Adds **Open configuration folder** to the Settings footer.
-          - Opens the Queue Pop Notifier folder and selects `config.json` for quick access.
-          - Retains the reduced Windows executable size introduced in 0.3.47.
+          - Keeps the selected language visible after saving the settings.
+          - Translates the **Notifications** section heading immediately when the language changes.
+          - Places **General** as the shared section heading and **Language** as a regular field label.
           '@
           gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
