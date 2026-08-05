@@ -1,9 +1,9 @@
 # Queue Pop Notifier
 
+![Services](services.png)
+
 > **Never miss a World of Warcraft queue pop again.**
 
-![Services](services.png)
- 
 Queue Pop Notifier sends an instant notification to your smartphone when your World of Warcraft queue is ready — even if you are away from your computer.
 
 The WoW add-on detects the queue pop and passes the event to the lightweight Windows desktop client. The client then sends the notification to your phone through [Pushover](https://pushover.net/).
