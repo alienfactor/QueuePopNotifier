@@ -6,7 +6,7 @@ Queue Pop Notifier sends an instant notification to your smartphone when your Wo
 
 The WoW add-on detects the queue pop and passes the event to the lightweight Windows desktop client. The client then sends the notification to your phone through [Pushover](https://pushover.net/).
 
-![How Queue Pop Notifier works](queuepop-client-flow.png)
+![How Queue Pop Notifier works](client_ui.png)
 
 ## Features
 
