@@ -24,6 +24,8 @@ jobs:
       - name: Verify and restore release icons
         shell: pwsh
         run: |
+          python -c "from pathlib import Path; p=Path('client/queuepop_companion.py'); p.write_bytes(p.read_bytes().replace(b'\r\n', b'\n'))"
+          python -c "from pathlib import Path; p=Path('.release_icon_patch.py'); s=p.read_text(encoding='utf-8'); s=s.replace('SOURCE.write_text(text, encoding=\"utf-8\")', 'SOURCE.write_bytes(text.encode(\"utf-8\"))'); p.write_text(s, encoding='utf-8')"
           python .release_icon_patch.py
           Remove-Item .release_icon_patch.py -Force
 
