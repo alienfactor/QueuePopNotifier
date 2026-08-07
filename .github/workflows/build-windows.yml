@@ -29,6 +29,7 @@ jobs:
           from pathlib import Path
           import base64
           import gzip
+          import hashlib
           import shutil
 
           source_dir = Path(".release_source")
@@ -36,6 +37,10 @@ jobs:
           if parts:
               encoded = "".join(part.read_text(encoding="utf-8").strip() for part in parts)
               source = gzip.decompress(base64.b64decode(encoded))
+              expected = "082b78f4d2d1a1ca56a70ac5959d804f604a905d1fefb4482effda6d63ca7de1"
+              actual = hashlib.sha256(source).hexdigest()
+              if actual != expected:
+                  raise RuntimeError(f"Release source checksum mismatch: {actual}")
               Path("client/queuepop_companion.py").write_bytes(source)
               shutil.rmtree(source_dir)
           '@ | python -
