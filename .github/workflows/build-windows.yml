@@ -1,4 +1,4 @@
-name: Build Windows client
+name: Build Windows client 0.4.0
 
 on:
   push:
