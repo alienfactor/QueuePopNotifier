@@ -40,6 +40,41 @@ jobs:
           pip install -r client/requirements.txt
           pip install pyinstaller
 
+      - name: Verify service icons through ImageTk
+        shell: pwsh
+        run: |
+          @'
+          import base64
+          import importlib.util
+          import io
+          import tkinter as tk
+          from pathlib import Path
+          from PIL import Image, ImageTk
+
+          source = Path("client/queuepop_companion.py")
+          spec = importlib.util.spec_from_file_location("queuepop_companion", source)
+          module = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(module)
+
+          root = tk.Tk()
+          root.withdraw()
+          try:
+              for name in ("PUSHOVER_SERVICE_ICON_B64", "NTFY_SERVICE_ICON_B64", "TELEGRAM_SERVICE_ICON_B64"):
+                  encoded = "".join(getattr(module, name).split())
+                  raw = base64.b64decode(encoded, validate=True)
+                  with Image.open(io.BytesIO(raw)) as source_image:
+                      image = source_image.convert("RGBA")
+                  image.thumbnail((42, 42), Image.LANCZOS)
+                  photo = ImageTk.PhotoImage(image, master=root)
+                  if photo.width() <= 0 or photo.height() <= 0:
+                      raise RuntimeError(f"{name}: ImageTk returned an empty image")
+                  print(f"{name}: ImageTk OK ({photo.width()}x{photo.height()})")
+          finally:
+              root.destroy()
+          '@ | Set-Content .verify_service_icons.py -Encoding utf8
+          python .verify_service_icons.py
+          Remove-Item .verify_service_icons.py -Force
+
       - name: Build Windows executable
         shell: pwsh
         run: |
@@ -47,11 +82,11 @@ jobs:
             --name QueuePopNotifier `
             --icon client/queuepop_notifier.ico `
             --add-data "client/queuepop_notifier.ico;." `
+            --hidden-import PIL._imagingtk `
             --exclude-module PIL._avif `
             --exclude-module PIL._webp `
             --exclude-module PIL._imagingcms `
             --exclude-module PIL._imagingmath `
-            --exclude-module PIL._imagingtk `
             client/queuepop_companion.py
 
       - name: Create SHA-256 checksum
@@ -82,7 +117,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add client/queuepop_companion.py builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
           if (-not (git diff --cached --quiet)) {
-            git commit -m "Build Windows client 0.4.0 with corrected service icons [skip ci]"
+            git commit -m "Build Windows client 0.4.0 with working service icons [skip ci]"
             git push
           }
 
