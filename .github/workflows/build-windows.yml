@@ -25,7 +25,9 @@ jobs:
         shell: pwsh
         run: |
           python -c "from pathlib import Path; p=Path('client/queuepop_companion.py'); p.write_bytes(p.read_bytes().replace(b'\r\n', b'\n'))"
-          python -c "from pathlib import Path; p=Path('.release_icon_patch.py'); s=p.read_text(encoding='utf-8'); s=s.replace('SOURCE.write_text(text, encoding=\"utf-8\")', 'SOURCE.write_bytes(text.encode(\"utf-8\"))'); p.write_text(s, encoding='utf-8')"
+          $patch = Get-Content .release_icon_patch.py -Raw
+          $patch = $patch.Replace("78b7735c07ad96ac7bb6bd5a2b20cb36eb00c05951c119cc041e4b355cbd70df", "2b4d93441b500c7483024824e210527e810ac7794837c6b9910b3de2b75a3834")
+          Set-Content .release_icon_patch.py -Value $patch -NoNewline -Encoding utf8
           python .release_icon_patch.py
           Remove-Item .release_icon_patch.py -Force
 
