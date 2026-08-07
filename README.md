@@ -1,7 +1,9 @@
 # Queue Pop Notifier
 
 [![Windows](https://img.shields.io/badge/Windows-Supported-0078D4)](#requirements)
-[![Pushover](https://img.shields.io/badge/Pushover-Available-2ea44f)](https://pushover.net/)
+[![Pushover](https://img.shields.io/badge/Pushover-Supported-2ea44f)](https://pushover.net/)
+[![ntfy](https://img.shields.io/badge/ntfy-Supported-2ea44f)](https://ntfy.sh/)
+[![Telegram](https://img.shields.io/badge/Telegram-Supported-2ea44f)](https://telegram.org/)
 [![WoW Add-on](https://img.shields.io/curseforge/v/1638570?label=WoW%20Add-on&color=C79C6E)](https://www.curseforge.com/wow/addons/queue-pop-notifier)
 
 ![Services](integrations.png)
@@ -10,21 +12,21 @@
 
 Queue Pop Notifier sends an instant notification to your smartphone when your World of Warcraft queue is ready, even if you are away from your computer.
 
-The WoW add-on detects the queue pop and passes the event to the lightweight Windows desktop client. The client then sends the notification to your phone through [Pushover](https://pushover.net/).
+The WoW add-on detects the queue pop and passes the event to the lightweight Windows desktop client. The client then sends the notification through your selected service: **Pushover, ntfy, or Telegram**.
 
 ![User interface](interface.png)
 
 ## Features
 
-* Instant smartphone notifications for World of Warcraft queue pops
-* Automatic queue detection through the WoW add-on
-* Lightweight Windows desktop client
-* Runs quietly in the Windows system tray
-* Automatic update checks when the client starts
-* Optional automatic startup with Windows
-* Built-in test notification
-* Simple one-time Pushover setup
-* Local storage of credentials and settings
+- Instant smartphone notifications for World of Warcraft queue pops
+- Support for **Pushover, ntfy, and Telegram**
+- Automatic queue detection through the WoW add-on
+- Lightweight Windows desktop client
+- Runs quietly in the Windows system tray
+- Automatic client updates
+- Optional automatic startup with Windows
+- Built-in connection test for each notification service
+- Local storage of credentials and settings
 
 ## How It Works
 
@@ -39,10 +41,13 @@ You can step away from your computer without constantly watching the screen.
 
 ## Requirements
 
-* World of Warcraft Classic with the [Queue Pop Notifier add-on](https://www.curseforge.com/wow/addons/queue-pop-notifier) installed
-* Windows 10 or Windows 11
-* The Queue Pop Notifier desktop client
-* A [Pushover](https://pushover.net/) account and smartphone app
+- World of Warcraft Classic with the [Queue Pop Notifier add-on](https://www.curseforge.com/wow/addons/queue-pop-notifier) installed
+- Windows 10 or Windows 11
+- The Queue Pop Notifier desktop client
+- At least one supported notification service:
+  - [Pushover](https://pushover.net/)
+  - [ntfy](https://ntfy.sh/)
+  - [Telegram](https://telegram.org/)
 
 ## Desktop Client
 
