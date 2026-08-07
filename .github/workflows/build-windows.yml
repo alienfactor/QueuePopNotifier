@@ -21,15 +21,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Verify and restore release icons
+      - name: Restore and verify release source
         shell: pwsh
         run: |
-          python -c "from pathlib import Path; p=Path('client/queuepop_companion.py'); p.write_bytes(p.read_bytes().replace(b'\r\n', b'\n'))"
-          $patch = Get-Content .release_icon_patch.py -Raw
-          $patch = $patch.Replace("78b7735c07ad96ac7bb6bd5a2b20cb36eb00c05951c119cc041e4b355cbd70df", "2b4d93441b500c7483024824e210527e810ac7794837c6b9910b3de2b75a3834")
-          Set-Content .release_icon_patch.py -Value $patch -NoNewline -Encoding utf8
-          python .release_icon_patch.py
-          Remove-Item .release_icon_patch.py -Force
+          python -c "import base64,zlib,hashlib,pathlib; src=pathlib.Path('.release_source/source.zlib.b64'); data=zlib.decompress(base64.b64decode(src.read_text(encoding='ascii').strip())); expected='fd8a26b46dc15ca30ac33f6d301b9a13354694a32d3108dc62cad77802c21b50'; actual=hashlib.sha256(data).hexdigest(); assert actual == expected, f'Release source hash mismatch: {actual}'; pathlib.Path('client/queuepop_companion.py').write_bytes(data); print(f'Verified release source: {actual}')"
+          python -m py_compile client/queuepop_companion.py
+          Remove-Item .release_source/source.zlib.b64 -Force
 
       - name: Restore application icon
         shell: pwsh
@@ -83,7 +80,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A client/queuepop_companion.py .release_source .release_icon_patch.py builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
+          git add -A client/queuepop_companion.py .release_source builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
           if (-not (git diff --cached --quiet)) {
             git commit -m "Build Windows client 0.4.0 [skip ci]"
             git push
