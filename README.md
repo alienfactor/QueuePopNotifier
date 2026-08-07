@@ -50,6 +50,21 @@ You can step away from your computer without constantly watching the screen.
 
 The desktop client runs in the Windows system tray and remains unobtrusive during normal use. After the initial Pushover setup, no further interaction is normally required.
 
+## Windows SmartScreen notice
+
+The Windows companion client is currently **not digitally signed**. Because of this, Microsoft Defender SmartScreen may display a warning such as:
+
+> **Windows protected your PC**  
+> Microsoft Defender SmartScreen prevented an unrecognized app from starting. Running this app might put your PC at risk.
+
+This warning does **not automatically mean that the application is malicious**. Windows shows it because the executable does not currently have a trusted code-signing certificate and has not yet built enough reputation with Microsoft SmartScreen.
+
+Code-signing certificates involve additional cost and administrative requirements, which are difficult to justify for a small free open-source project.
+
+If you downloaded Queue Pop Notifier from the official GitHub repository, you can compare the provided SHA-256 checksum with the downloaded executable before running it.
+
+![Microsoft Defender SmartScreen warning](uac.png)
+
 ## Optional queue-pop sound
 
 You can use the original queue-pop sound for notifications on your phone.
