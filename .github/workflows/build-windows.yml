@@ -21,6 +21,28 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Restore release source
+        shell: pwsh
+        run: |
+          if (Test-Path ".release_source") {
+            $parts = Get-ChildItem ".release_source/part-*.txt" | Sort-Object Name
+            if ($parts.Count -gt 0) {
+              $encoded = ($parts | ForEach-Object { (Get-Content $_.FullName -Raw).Trim() }) -join ""
+              $compressed = [Convert]::FromBase64String($encoded)
+              $input = New-Object IO.MemoryStream(,$compressed)
+              $gzip = New-Object IO.Compression.GzipStream($input, [IO.Compression.CompressionMode]::Decompress)
+              $output = [IO.File]::Create("client/queuepop_companion.py")
+              try {
+                $gzip.CopyTo($output)
+              } finally {
+                $output.Dispose()
+                $gzip.Dispose()
+                $input.Dispose()
+              }
+              Remove-Item ".release_source" -Recurse -Force
+            }
+          }
+
       - name: Restore application icon
         shell: pwsh
         run: |
@@ -56,7 +78,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QueuePopNotifier_Client_v0.3.53_Windows
+          name: QueuePopNotifier_Client_v0.4.0_Windows
           path: |
             dist/QueuePopNotifier.exe
             dist/QueuePopNotifier.exe.sha256
@@ -68,14 +90,14 @@ jobs:
           Copy-Item dist/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe -Force
           Copy-Item dist/QueuePopNotifier.exe.sha256 builds/windows/QueuePopNotifier.exe.sha256 -Force
 
-      - name: Commit compiled executable
+      - name: Commit release files
         shell: pwsh
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
+          git add -A client/queuepop_companion.py .release_source builds/windows/QueuePopNotifier.exe builds/windows/QueuePopNotifier.exe.sha256
           if (-not (git diff --cached --quiet)) {
-            git commit -m "Build Windows client 0.3.53"
+            git commit -m "Build Windows client 0.4.0 [skip ci]"
             git push
           }
 
@@ -84,30 +106,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $tag = "v0.3.53"
-          $title = "Queue Pop Notifier 0.3.53"
+          $tag = "v0.4.0"
+          $title = "Queue Pop Notifier 0.4.0"
           $notes = @'
           Queue Pop Notifier sends an instant notification to your phone when a PvE or PvP queue becomes ready in World of Warcraft: Mists of Pandaria Classic—so you can step away from your PC without missing the invite.
 
           ## Highlights
 
           - Instant notifications for PvE and PvP queue pops
-          - Alerts when a failed proposal places you back into the queue
-          - Fast detection, typically within less than one second
+          - Fast queue detection
           - Automatic client updates
           - German and English interface
-          - Compact tray application with no intrusive update popups
+          - Compact Windows tray application
+          - Multiple notification services
 
-          ## Changes in 0.3.53
+          ## Changes in 0.4.0
 
-          - Replaced the native Windows startup checkbox with a compact toggle switch.
-          - Matched the active toggle color to the blue **Save** button.
-          - Made the entire Windows startup row clickable and added keyboard control.
+          - Added ntfy and Telegram as notification providers alongside Pushover.
+          - Added provider-specific setup and connection testing.
+          - Updated the settings interface for selecting and configuring the active notification service.
 
           ## Installation
 
           1. Download `QueuePopNotifier.exe` below.
-          2. Start the client and enter your Pushover User Key and App/API Token.
+          2. Start the client and configure one supported notification service.
           3. Keep the WoW addon enabled while playing.
 
           Existing installations receive this version automatically.
@@ -116,7 +138,7 @@ jobs:
 
           - Windows 10 or Windows 11
           - Queue Pop Notifier WoW addon
-          - Pushover account
+          - Pushover, ntfy, or Telegram for smartphone notifications
           '@
           gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
