@@ -1,6 +1,6 @@
 # Queue Pop Notifier
 
-![Windows](https://img.shields.io/badge/Windows-Supported-0078D4)
+[![Windows](https://img.shields.io/badge/Windows-Supported-0078D4)](#requirements)
 [![Pushover](https://img.shields.io/badge/Pushover-Available-2ea44f)](https://pushover.net/)
 [![WoW Add-on](https://img.shields.io/curseforge/v/1638570?label=WoW%20Add-on&color=C79C6E)](https://www.curseforge.com/wow/addons/queue-pop-notifier)
 
