@@ -25,22 +25,20 @@ jobs:
         shell: pwsh
         run: |
           if (Test-Path ".release_source") {
-            $parts = Get-ChildItem ".release_source/part-*.txt" | Sort-Object Name
-            if ($parts.Count -gt 0) {
-              $encoded = ($parts | ForEach-Object { (Get-Content $_.FullName -Raw).Trim() }) -join ""
-              $compressed = [Convert]::FromBase64String($encoded)
-              $input = New-Object IO.MemoryStream(,$compressed)
-              $gzip = New-Object IO.Compression.GzipStream($input, [IO.Compression.CompressionMode]::Decompress)
-              $output = [IO.File]::Create("client/queuepop_companion.py")
-              try {
-                $gzip.CopyTo($output)
-              } finally {
-                $output.Dispose()
-                $gzip.Dispose()
-                $input.Dispose()
-              }
-              Remove-Item ".release_source" -Recurse -Force
-            }
+            @'
+          from pathlib import Path
+          import base64
+          import gzip
+          import shutil
+
+          source_dir = Path(".release_source")
+          parts = sorted(source_dir.glob("part-*.txt"))
+          if parts:
+              encoded = "".join(part.read_text(encoding="utf-8").strip() for part in parts)
+              source = gzip.decompress(base64.b64decode(encoded))
+              Path("client/queuepop_companion.py").write_bytes(source)
+              shutil.rmtree(source_dir)
+          '@ | python -
           }
 
       - name: Restore application icon
