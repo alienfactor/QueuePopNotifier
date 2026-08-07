@@ -1,6 +1,6 @@
 # Queue Pop Notifier
 
-![Services](services.png)
+![Services](integrations.png)
 
 > **Never miss a World of Warcraft queue pop again.**
 
