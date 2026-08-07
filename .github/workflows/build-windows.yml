@@ -129,37 +129,32 @@ jobs:
           $tag = "v0.4.0"
           $title = "Queue Pop Notifier 0.4.0"
           $notes = @'
-          Queue Pop Notifier sends an instant notification to your phone when a PvE or PvP queue becomes ready in World of Warcraft: Mists of Pandaria Classic—so you can step away from your PC without missing the invite.
+          ## New in 0.4.0
 
-          ## Highlights
+          ### ntfy and Telegram support
 
-          - Instant notifications for PvE and PvP queue pops
-          - Fast queue detection
-          - Automatic client updates
-          - German and English interface
-          - Compact Windows tray application
-          - Multiple notification services
+          Queue Pop Notifier now supports **three notification services**:
 
-          ## Changes in 0.4.0
+          - **Pushover**
+          - **ntfy** — new
+          - **Telegram** — new
 
-          - Added ntfy and Telegram as notification providers alongside Pushover.
+          You can configure each provider directly in the Windows client and choose which service should be active.
+
+          ### Additional changes
+
           - Added provider-specific setup and connection testing.
+          - Added service status indicators for configured, incomplete and inactive providers.
           - Updated the settings interface for selecting and configuring the active notification service.
-          - Corrected the Pushover, ntfy and Telegram service icons.
+          - Added dedicated Pushover, ntfy and Telegram service icons.
 
           ## Installation
 
           1. Download `QueuePopNotifier.exe` below.
-          2. Start the client and configure one supported notification service.
-          3. Keep the WoW addon enabled while playing.
+          2. Start the client and configure Pushover, ntfy or Telegram.
+          3. Keep the WoW add-on enabled while playing.
 
           Existing installations receive this version automatically.
-
-          ## Requirements
-
-          - Windows 10 or Windows 11
-          - Queue Pop Notifier WoW addon
-          - Pushover, ntfy, or Telegram for smartphone notifications
           '@
           gh release view $tag 2>$null
           if ($LASTEXITCODE -eq 0) {
