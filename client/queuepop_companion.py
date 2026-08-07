@@ -1107,7 +1107,9 @@ class CompanionApp(tk.Tk):
     def _draw_service_icon(self, canvas, key, image_b64, fallback_text, fallback_fill, muted=False):
         canvas.delete("all")
         try:
-            image_bytes = base64.b64decode(image_b64, validate=True)
+            # Embedded Base64 may contain line breaks. Strip all whitespace before strict validation.
+            normalized_b64 = "".join(image_b64.split())
+            image_bytes = base64.b64decode(normalized_b64, validate=True)
             with Image.open(io.BytesIO(image_bytes)) as source:
                 image = source.convert("RGBA")
             # Preserve the supplied icon exactly; it is already circular and transparent.
